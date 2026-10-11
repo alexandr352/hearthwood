@@ -73,3 +73,5 @@ one. Commands about an analysis use the latest one unless you name another with
 | `[rules] closed_days` | how far back closed items are read |
 | `[rules] wip` | limits per column, e.g. `{ "In Progress" = 3 }` |
 | `[rules] people`, `person_wip` | off by default; see [People and privacy](people-and-privacy.md) |
+| `[stats] type_labels` | label patterns that give a card its type on the Stats tab, e.g. `["type:*"]`; empty = the tracker's issue type |
+| `[stats] goal_labels` | label patterns that make a card a goal even with nothing under it, e.g. `["epic"]` |

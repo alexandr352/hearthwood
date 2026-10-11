@@ -39,8 +39,9 @@ development tickets. Hearthwood looks after the board those tickets live on.
 - **Learns how you judge.** You agree or disagree with each point and give your reason in a
   line. A reason you would apply again becomes a rule in `criteria.md`, in your words, and it
   outranks the reading's defaults from then on.
-- **Shows it all on one page.** `~/.hearthwood/log.html` is a static page with no server. Click
-  any card number to read the card in a side panel.
+- **Shows it all on one page.** `~/.hearthwood/log.html` is a static page with no server, in three
+  tabs: Active (what needs you), All (every card, with a filter) and Stats (the board's numbers,
+  counted without a model). Click any card number to read the card in a side panel.
 - **Has a spirit to talk to.** `manager chat` opens a Claude Code session that knows the home
   and walks through an analysis with you.
 

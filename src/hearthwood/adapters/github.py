@@ -29,9 +29,9 @@ ISSUE_FIELDS = """
   labels(first: 30) { nodes { name } }
   assignees(first: 10) { nodes { login } }
   parent { number repository { nameWithOwner } }
-  subIssues(first: 50) { nodes { number repository { nameWithOwner } } }
-  blockedBy(first: 30) { nodes { number repository { nameWithOwner } } }
-  blocking(first: 30) { nodes { number repository { nameWithOwner } } }
+  subIssues(first: 50) { pageInfo { hasNextPage endCursor } nodes { number repository { nameWithOwner } } }
+  blockedBy(first: 30) { pageInfo { hasNextPage endCursor } nodes { number repository { nameWithOwner } } }
+  blocking(first: 30) { pageInfo { hasNextPage endCursor } nodes { number repository { nameWithOwner } } }
   closedByPullRequestsReferences(first: 10, includeClosedPrs: true) { nodes { number state isDraft merged url } }
   timelineItems(last: 40, itemTypes: [PROJECT_V2_ITEM_STATUS_CHANGED_EVENT]) {
     nodes { ... on ProjectV2ItemStatusChangedEvent { createdAt previousStatus status } }
@@ -50,6 +50,36 @@ query($owner: String!, $repo: String!, $states: [IssueState!], $after: String) {
   rateLimit { cost remaining resetAt }
 }
 """ % (PAGE, ISSUE_FIELDS)
+
+# A list cut by the first page above (a goal with more than 50 sub-items) is read on, 100 at a time,
+# so a count never stops silently at the page size.
+MORE_QUERY = """
+query($owner: String!, $repo: String!, $number: Int!, $after: String) {
+  repository(owner: $owner, name: $repo) {
+    issue(number: $number) {
+      %s(first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes { number repository { nameWithOwner } } }
+    }
+  }
+  rateLimit { cost remaining resetAt }
+}
+"""
+LINKS = (("subIssues", "children"), ("blockedBy", "blocked_by"), ("blocking", "blocking"))
+
+
+def read_more(gh, owner, repo, number, field, after, home_repo):
+    """The rest of one issue's list, after the cursor where the first page stopped."""
+    out = []
+    while after:
+        data, errors = gh.query(MORE_QUERY % field, {"owner": owner, "repo": repo, "number": number, "after": after})
+        conn = (((data.get("repository") or {}).get("issue") or {}).get(field)) or {}
+        if not conn:
+            msg = "; ".join(e.get("message", "") for e in errors) or "no answer"
+            raise GitHubError(f"cannot read the rest of #{number}'s {field}: {msg}")
+        out += [_key(x, home_repo) for x in conn.get("nodes") or [] if x]
+        page = conn.get("pageInfo") or {}
+        after = page.get("endCursor") if page.get("hasNextPage") else None
+    return out
+
 
 PROJECT_QUERY = """
 query($owner: String!, $number: Int!, $after: String) {
@@ -190,7 +220,13 @@ def read_issues(gh, owner, repo, closed_days, now=None, progress=None):
                 if states == ["CLOSED"] and (n.get("updatedAt") or "") < cutoff:
                     stop = True
                     break
-                items.append(issue_to_item(n, home_repo))
+                item = issue_to_item(n, home_repo)
+                for field, attr in LINKS:
+                    page = (n.get(field) or {}).get("pageInfo") or {}
+                    if page.get("hasNextPage"):
+                        getattr(item, attr).extend(read_more(gh, owner, repo, n["number"], field, page.get("endCursor"),
+                                                             home_repo))
+                items.append(item)
             if progress:
                 progress(len(items))
             if stop or not conn["pageInfo"]["hasNextPage"]:

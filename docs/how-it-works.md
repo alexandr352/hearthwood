@@ -189,6 +189,27 @@ A card's text is shown, never run: the panel builds every line with plain text a
 the embedded cards are escaped so that no card can close the element that holds them. Assignees
 are not on the page unless the board has `people = true`.
 
+### Three tabs
+
+The page has three tabs; the one you last chose comes back, and `log.html#tab=stats` opens one directly.
+
+- **Active**: what is above. The next step, the reading, the questions, the proposals, the findings.
+- **All**: every card on the board, grouped by column in the board's order, closed cards folded at
+  the end. A filter narrows it by number, title, type or label as you type, and every row opens the
+  card in the panel.
+- **Stats**: the numbers of the board, counted by plain code from the snapshot, with no model:
+  - open, how many wait and in which columns, created against closed in the last 14 days, open
+    cards under no goal, and what is in progress and in review now;
+  - created, done and not planned per week for six weeks, as a chart with a table view;
+  - every goal's size and progress: its cards, how many are open and done, how many were added in
+    the last 30 and 7 days and closed in the last 30, and the open goals with nothing under them;
+  - what is open by type and column, how old the open cards are, and the last 14 days day by day.
+
+  A snapshot holds the cards closed in the last `closed_days` only, so a week that reaches further
+  back is marked as short rather than shown as whole. A *type* is the tracker's issue type, or the
+  first label matching `[stats] type_labels`; a *goal* is a card with sub-items, or one labelled
+  with `[stats] goal_labels`, so a goal with nothing under it yet still counts.
+
 ## The fence
 
 Every tool call of a hearthwood session passes `src/hearthwood/fence.py`, a Claude Code

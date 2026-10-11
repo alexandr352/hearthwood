@@ -80,6 +80,12 @@ wip = {{}}
 # true shows how much active work each person holds, as load, never as a score.
 people = false
 person_wip = 0                               # with people = true: flag a person above this many
+
+# The Stats tab. A type is the tracker's issue type, or the first label matching one of these
+# patterns, e.g. ["op:*"]. A goal is an item with sub-items, or one labelled with these patterns.
+[stats]
+type_labels = []
+goal_labels = []
 """
 
 SPIRIT_FILES = ("CLAUDE.md", "persona.md")

@@ -108,6 +108,23 @@ class Page(unittest.TestCase):
         self.assertIn("<span class='badge medium'>medium</span>", page)
         self.assertNotIn("chip sev-", page)
 
+    def test_three_tabs_and_their_views(self):
+        page = self.build()
+        for tab in ("active", "all", "stats"):
+            self.assertIn(f"role=tab data-tab={tab}", page)
+        self.assertIn("<div class=view data-view=active>", page)
+        self.assertIn("<div class=view data-view=all hidden>", page)
+        self.assertIn("<div class=view data-view=stats hidden>", page)
+        self.assertIn('class=allist data-columns="[&quot;Backlog&quot;', page)
+
+    def test_the_stats_chart_closes_every_element(self):
+        page = self.build()
+        svg = page[page.index('<svg class="chart"'):page.index("</svg>")]
+        self.assertNotIn("/>", svg)
+        self.assertEqual(svg.count("<line"), svg.count("</line>"))
+        self.assertIn('data-tip="', svg)
+        self.assertIn("Table view", page)
+
     def test_the_panel_builds_nodes_from_text_only(self):
         self.assertNotIn("innerHTML", worklog.JS)
         self.assertNotIn("insertAdjacentHTML", worklog.JS)

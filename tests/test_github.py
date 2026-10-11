@@ -25,6 +25,7 @@ def issue(n, state="OPEN", updated="2026-10-09T00:00:00Z", statuses=(), **kw):
 class FakeGitHub:
     def __init__(self, open_pages, closed_pages, project=None, status=200):
         self.open, self.closed, self.project, self.status, self.queries = open_pages, closed_pages, project, status, []
+        self.more = {}
 
     def __call__(self, url, headers, body):
         assert headers["Authorization"] == "Bearer T"
@@ -33,6 +34,14 @@ class FakeGitHub:
         if self.status != 200:
             return self.status, b'{"message": "Bad credentials"}'
         v = q["variables"]
+        if "issue(number:" in q["query"]:
+            field = next(f for f in ("subIssues", "blockedBy", "blocking") if f + "(first: 100" in q["query"])
+            rest = self.more[(v["number"], field)]
+            i = int(v["after"])
+            page = rest[i - 1] if i - 1 < len(rest) else []
+            conn = {"pageInfo": {"hasNextPage": i < len(rest), "endCursor": str(i + 1)},
+                    "nodes": [{"number": c, "repository": {"nameWithOwner": "o/r"}} for c in page]}
+            return 200, json.dumps({"data": {"repository": {"issue": {field: conn}}}}).encode()
         if "projectV2" in q["query"]:
             kind = "organization" if "organization(" in q["query"] else "user"
             if self.project is None or kind != "organization":
@@ -47,6 +56,17 @@ class FakeGitHub:
 
 
 class Read(unittest.TestCase):
+    def test_a_goal_with_more_than_one_page_of_sub_items_is_read_whole(self):
+        goal = issue(1)
+        goal["subIssues"] = {"pageInfo": {"hasNextPage": True, "endCursor": "1"},
+                             "nodes": [{"number": c, "repository": {"nameWithOwner": "o/r"}} for c in range(100, 150)]}
+        fake = FakeGitHub([[goal]], [[]])
+        fake.more[(1, "subIssues")] = [list(range(150, 250)), list(range(250, 264))]
+        b = github.read_board("t", "o/r", token="T", transport=fake, closed_days=60)
+        kids = b.by_key()["#1"].children
+        self.assertEqual(len(kids), 164)
+        self.assertEqual((kids[0], kids[-1]), ("#100", "#263"))
+
     def test_issues_only_takes_columns_from_history(self):
         fake = FakeGitHub([[issue(1, statuses=[("", "Todo"), ("Todo", "In Progress")]), issue(2, blocked_by=[1])],
                            [issue(3)]],

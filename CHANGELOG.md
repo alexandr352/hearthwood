@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0 — 2026-10-11
+
+- **Three tabs on the page: Active, All, Stats.** The last one chosen comes back; `#tab=<name>`
+  opens one directly.
+- **All:** every card on the board, grouped by column in the board's order, with a filter.
+- **Stats:** the board's numbers, counted by plain code: the headline numbers, created and closed
+  per week (a chart with a table view), every goal's size, progress and growth, open cards by type
+  and column, their ages, and the last 14 days. New settings `[stats] type_labels` and
+  `goal_labels`.
+- **Fixed: long lists were cut at the first page.** A goal with more than 50 sub-items, or a card
+  with more than 30 dependencies, was read only up to that number, silently. The rest is now read
+  page by page.
+
 ## 0.4.0 — 2026-10-11
 
 - **A new look for the page,** in the family of hearthwork's: outlined badges for severity
