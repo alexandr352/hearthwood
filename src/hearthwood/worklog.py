@@ -12,44 +12,58 @@ import html
 import json
 import re
 
-from . import __version__, criteria, home, reading
+from . import __version__, criteria, guide, home, reading
 
 CSS = """
 :root{--bg:#f6f4ee;--panel:#fff;--ink:#22231f;--mute:#6b6c62;--line:#e1ddd2;--green:#2f7d4f;--amber:#b47b10;--red:#b8412d;--accent:#55743a;--chip:#eef0e6}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#151613;--panel:#1e201b;--ink:#e9e8e0;--mute:#9a9b8f;--line:#33352e;--green:#58b07c;--amber:#d9a441;--red:#e0654e;--accent:#93b76c;--chip:#2a2d25}}
 :root[data-theme=dark]{--bg:#151613;--panel:#1e201b;--ink:#e9e8e0;--mute:#9a9b8f;--line:#33352e;--green:#58b07c;--amber:#d9a441;--red:#e0654e;--accent:#93b76c;--chip:#2a2d25}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:1040px;margin:0 auto;padding:20px 16px 60px;transition:margin-left .18s ease}
-header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:12px}
-h1{font-size:20px;margin:0}h1 span{color:var(--accent)}h2{font-size:16px;margin:28px 0 8px}h3{font-size:14px;margin:0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;transition:padding-right .18s ease}
+main{max-width:980px;margin:0 auto;padding:24px 16px 64px}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+h1{font-size:22px;margin:0}h1 span{color:var(--accent)}h1 small{color:var(--mute);font-weight:400;font-size:13px;margin-left:8px}
+h2{font-size:18px;margin:36px 0 12px}h2 .where{color:var(--mute);font-weight:400;font-size:13px;margin-left:6px;word-break:break-all}
+h3{margin:0;font-size:16px}
 .mute{color:var(--mute)}.small{font-size:13px}
-button.theme{margin-left:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 10px;cursor:pointer}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
-.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.tile b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+button.theme,a.theme{background:none;border:1px solid var(--line);color:var(--mute);border-radius:8px;padding:4px 10px;cursor:pointer;font:13px system-ui,sans-serif;text-decoration:none;line-height:normal}
+button.theme:hover,a.theme:hover{color:var(--ink);border-color:var(--mute)}
+.nextstep{background:color-mix(in srgb,var(--accent) 9%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:10px;padding:12px 14px;margin:14px 0}
+.nextstep .hint{color:var(--mute);font-size:13px;margin-top:4px}
+.nlabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-right:6px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin:14px 0 8px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--mute);font-size:13px}
+.tile b{display:block;color:var(--ink);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
+.card p{margin:8px 0}.card h3{display:inline}
 .row{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
-.chip{display:inline-block;background:var(--chip);border-radius:999px;padding:0 8px;font-size:12px;color:var(--mute)}
-.sev-high{color:var(--red)}.sev-medium{color:var(--amber)}.sev-low{color:var(--mute)}.sev-info{color:var(--green)}
-.v-agree{color:var(--green)}.v-disagree{color:var(--red)}
+.badge{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--mute);line-height:1.4;white-space:nowrap}
+.badge.high,.badge.disagree,.badge.rejected{color:var(--red);border-color:var(--red)}
+.badge.medium{color:var(--amber);border-color:var(--amber)}
+.badge.info,.badge.agree,.badge.approved{color:var(--green);border-color:var(--green)}
+.chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--mute);white-space:nowrap}
+.chip.closed{color:var(--green);border-color:var(--green)}.chip.open{color:var(--ink);border-color:var(--ink)}
+.keys{font-size:13px;margin-top:4px}
 a{color:var(--accent)}code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--chip);padding:0 4px;border-radius:4px}
+.id{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mute)}
 pre{white-space:pre-wrap;word-break:break-word;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
-details>summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:baseline}details>summary::-webkit-details-marker{display:none}details>summary::before{content:'▸';color:var(--mute);flex:none}details[open]>summary::before{content:'▾'}
+details>summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}details>summary::-webkit-details-marker{display:none}details>summary::before{content:'▸';color:var(--mute);flex:none}details[open]>summary::before{content:'▾'}
 table{border-collapse:collapse;width:100%;font-size:13px}td,th{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
 button.key{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 button.key:hover,button.key:focus-visible{color:var(--ink)}
-#panel{position:fixed;top:0;left:0;bottom:0;width:min(460px,100vw);background:var(--panel);border-right:1px solid var(--line);
-box-shadow:4px 0 24px rgba(0,0,0,.18);transform:translateX(-105%);transition:transform .18s ease;overflow-y:auto;z-index:10;padding:16px 18px 40px}
+#panel{position:fixed;top:0;right:0;bottom:0;width:min(400px,100vw);background:var(--panel);border-left:1px solid var(--line);
+box-shadow:-4px 0 24px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s ease;overflow-y:auto;z-index:10;padding:16px 18px 40px}
 #panel.open{transform:none}
-#panel header{display:flex;align-items:flex-start;gap:10px;position:sticky;top:-16px;margin:-16px -18px 6px;padding:16px 18px 8px;background:var(--panel);border-bottom:1px solid var(--line);z-index:1}
-#panel h2{margin:0;font-size:17px;line-height:1.35;flex:1}
-#panel .close{background:none;border:1px solid var(--line);border-radius:6px;color:var(--ink);cursor:pointer;font-size:15px;line-height:1;padding:4px 8px}
-#panel dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;font-size:13px;margin:10px 0}
+#panel header{display:flex;align-items:flex-start;gap:10px;position:sticky;top:-16px;margin:-16px -18px 8px;padding:16px 18px 10px;background:var(--panel);border-bottom:1px solid var(--line);z-index:1}
+#panel h2{margin:0;font-size:16px;line-height:1.35;flex:1}
+#panel .close{background:none;border:1px solid var(--line);border-radius:8px;color:var(--mute);cursor:pointer;font-size:13px;line-height:1;padding:5px 9px}
+#panel .close:hover{color:var(--ink);border-color:var(--mute)}
+#panel dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;font-size:13px;margin:12px 0}
 #panel dt{color:var(--mute)}#panel dd{margin:0;overflow-wrap:anywhere}
 #panel .desc{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
-#panel h3{font-size:13px;color:var(--mute);margin:14px 0 4px;font-weight:600}
-@media (min-width:1100px){body.panel-open main{margin-left:max(460px,calc((100% - 1040px)/2));margin-right:auto}body.panel-open #panel{box-shadow:none}}
-@media (prefers-reduced-motion:reduce){#panel,main{transition:none}}
+#panel h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:16px 0 4px}
+@media (min-width:1100px){body.panel-open{padding-right:400px}body.panel-open #panel{box-shadow:none}}
+@media (prefers-reduced-motion:reduce){#panel,body{transition:none}}
 """
 
 E = html.escape
@@ -80,8 +94,8 @@ function parse(){var h=location.hash.slice(1);if(h.indexOf('card=')!==0)return n
   return b&&card(b,k)?[b,k]:null}
 function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board=b;
   var hd=el('header');var h=el('h2',null,k+' '+(c.title||''));h.id='panel-title';hd.appendChild(h);
-  var x=el('button','close','✕');x.type='button';x.setAttribute('aria-label','Close');x.onclick=close;hd.appendChild(x);P.appendChild(hd);
-  var chips=el('div','row');[state(c),c.column,c.kind].concat(c.labels||[]).forEach(function(v){if(v)chips.appendChild(el('span','chip',v))});P.appendChild(chips);
+  var x=el('button','close','close');x.type='button';x.setAttribute('aria-label','Close');x.onclick=close;hd.appendChild(x);P.appendChild(hd);
+  var chips=el('div','row');chips.appendChild(el('span','chip '+(c.state==='closed'?(c.close_reason==='completed'?'closed':''):'open'),state(c)));[c.column,c.kind].concat(c.labels||[]).forEach(function(v){if(v)chips.appendChild(el('span','chip',v))});P.appendChild(chips);
   if(c.stub){P.appendChild(el('p','mute small','The page carries in full only the cards it mentions; this card\'s description is not on it.'))}
   else{var dl=el('dl');
     row(dl,'parent',c.parent?key(b,c.parent):null);
@@ -187,7 +201,7 @@ def embed(obj):
 def board_section(h, b):
     snap = b.latest_snapshot()
     d = b.latest_analysis()
-    parts = [f"<h2>Board <span>{E(b.name)}</span> <span class='mute small'>{E(b.source)} {E(b.where)}</span></h2>"]
+    parts = [f"<h2>{E(b.name)}<span class=where>{E(b.source)} · {E(b.where)}</span></h2>"]
     if not snap:
         return parts + ["<p class=mute>Not read yet: <code>manager read</code>.</p>"]
     items = {i["key"]: i for i in json.loads(snap.read_text(encoding="utf-8"))["items"]}
@@ -217,17 +231,17 @@ def board_section(h, b):
         parts.append(f"<h2>What needs attention</h2><div class=card>{_prose(r.get('summary', ''), items, ref)}</div>")
         for n, a in enumerate(r.get("attention") or [], 1):
             v = verdicts.get(f"A{n}")
-            parts.append(f"<div class=card><div class=row><code>A{n}</code><h3>{_prose(a['title'], items, ref)}</h3>"
-                         f"<span class=chip>{E(a.get('confidence', ''))}</span>"
-                         + (f"<span class='chip v-{E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
-                         + f"</div><div class=small>{_keys(a.get('keys', []), items, ref)}</div><p>{_prose(a['why'], items, ref)}</p>"
+            parts.append(f"<div class=card><div class=row><span class=id>A{n}</span><h3>{_prose(a['title'], items, ref)}</h3>"
+                         + (f"<span class=badge>{E(a['confidence'])} confidence</span>" if a.get('confidence') else "")
+                         + (f"<span class='badge {E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
+                         + f"</div><div class=keys>{_keys(a.get('keys', []), items, ref)}</div><p>{_prose(a['why'], items, ref)}</p>"
                          f"<p class=small><b>Next step:</b> {_prose(a['next_step'], items, ref)}</p></div>")
         qs = r.get("questions") or []
         if qs:
             parts.append("<h2>Questions</h2>")
             for n, q in enumerate(qs, 1):
                 v = verdicts.get(f"Q{n}")
-                parts.append(f"<div class=card><div class=row><code>Q{n}</code><span class=chip>for {E(q.get('for', ''))}</span>"
+                parts.append(f"<div class=card><div class=row><span class=id>Q{n}</span><span class=badge>for {E(q.get('for', ''))}</span>"
                              f"{_prose(q['question'], items, ref)}</div>"
                              + (f"<p class=small><b>Answered:</b> {E(v.get('answer', ''))}</p>" if v else "") + "</div>")
         try:
@@ -237,8 +251,8 @@ def board_section(h, b):
         if props:
             parts.append("<h2>Proposals <span class='mute small'>nothing is written to the board; approving records your decision</span></h2>")
             for p in props:
-                parts.append(f"<div class=card><div class=row><code>{E(p['id'])}</code><span class=chip>{E(p['action'])}</span>"
-                             f"<span class=chip>{E(p.get('status', 'proposed'))}</span>{_keys(p.get('keys', []), items, ref)}</div>"
+                parts.append(f"<div class=card><div class=row><span class=id>{E(p['id'])}</span><span class=badge>{E(p['action'])}</span>"
+                             f"<span class='badge {E(p.get('status', 'proposed'))}'>{E(p.get('status', 'proposed'))}</span>{_keys(p.get('keys', []), items, ref)}</div>"
                              f"<p>{_prose(p['change'], items, ref)}</p><p class='mute small'>{_prose(p['why'], items, ref)}</p></div>")
     elif (d / "reading-broken.json").exists() or (d / "reading-failed.txt").exists():
         parts.append("<p class=mute>The reading did not complete for this analysis; the facts below stand alone.</p>")
@@ -246,16 +260,16 @@ def board_section(h, b):
         parts.append("<p class=mute>Facts only (no reading): <code>manager analyze</code> adds one.</p>")
     if facts["ready"]:
         parts.append(f"<h2>Ready to start <span class='mute small'>{len(facts['ready'])}</span></h2>"
-                     f"<div class=card small>{_keys(facts['ready'], items, ref)}</div>")
+                     f"<div class=card>{_keys(facts['ready'], items, ref)}</div>")
     parts.append("<h2>Findings</h2>")
     for f in facts["findings"]:
         if f["rule"] == "ready":
             continue
         v = verdicts.get(f["id"])
-        parts.append(f"<details class=card><summary><span class=row><code>{E(f['id'])}</code>"
-                     f"<span class='chip sev-{E(f['severity'])}'>{E(f['severity'])}</span><span>{_prose(f['title'], items, ref)}</span>"
-                     + (f"<span class='chip v-{E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
-                     + f"</span></summary><p>{_prose(f['says'], items, ref)}</p><div class=small>{_keys(f['keys'], items, ref)}</div>"
+        parts.append(f"<details class=card><summary><span class=row><span class='badge {E(f['severity'])}'>{E(f['severity'])}</span>"
+                     f"<span>{_prose(f['title'], items, ref)}</span><span class=id>{E(f['id'])}</span>"
+                     + (f"<span class='badge {E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
+                     + f"</span></summary><p>{_prose(f['says'], items, ref)}</p><div class=keys>{_keys(f['keys'], items, ref)}</div>"
                      + (f"<p class='mute small'>Your reason: {E(v['why'])}</p>" if v and v.get("why") else "")
                      + "</details>")
     people = bool(b.settings["rules"].get("people"))
@@ -266,9 +280,12 @@ def board_section(h, b):
 
 def build(h=None):
     h = h or home.home_dir()
-    body = [f"<header><h1>hearth<span>wood</span></h1><span class='mute small'>version {E(__version__)} · built {E(home.now_iso())}</span>"
+    cmd, why = guide.next_step(h)
+    body = [f"<div class=top><h1>hearth<span>wood</span><small>version {E(__version__)} · built {E(home.now_iso())}</small></h1>"
+            "<span class=tools><a class=theme href=#criteria>criteria</a><a class=theme href=#calls>model calls</a>"
             "<button class=theme onclick=\"var r=document.documentElement,d=r.dataset.theme==='dark'||(!r.dataset.theme&&"
-            "matchMedia('(prefers-color-scheme: dark)').matches);r.dataset.theme=d?'light':'dark'\">theme</button></header>"]
+            "matchMedia('(prefers-color-scheme: dark)').matches);r.dataset.theme=d?'light':'dark'\">theme</button></span></div>",
+            f"<div class=nextstep><span class=nlabel>next</span><code>{E(cmd)}</code><div class=hint>{E(why)}</div></div>"]
     bs = home.boards(h)
     if not bs:
         body.append("<p>No board yet. <code>manager connect github</code> or <code>manager connect markdown &lt;folder&gt;</code>.</p>")
@@ -277,7 +294,7 @@ def build(h=None):
         body += board_section(h, b)
         body.append("</section>")
     crit = (h / "criteria.md").read_text(encoding="utf-8") if (h / "criteria.md").exists() else ""
-    body.append(f"<h2>Your criteria</h2><pre>{E(crit.strip() or '(none yet)')}</pre>")
+    body.append(f"<h2 id=criteria>Your criteria</h2><pre>{E(crit.strip() or '(none yet)')}</pre>")
     runs = home.read_jsonl(h / "runs.jsonl")[-10:]
     if runs:
         rows = "".join(f"<tr><td>{E(str(r.get('at', '')))}</td><td>{E(str(r.get('board', '')))}</td><td>{E(str(r.get('label', '')))}</td>"
@@ -285,7 +302,7 @@ def build(h=None):
                        f"<td>{'$%.2f' % r['cost_usd'] if isinstance(r.get('cost_usd'), (int, float)) else '-'}</td>"
                        f"<td>{E(str(r.get('error') or ''))}</td></tr>" for r in reversed(runs))
         total = sum(r.get("cost_usd") or 0 for r in home.read_jsonl(h / "runs.jsonl"))
-        body.append(f"<h2>Model calls <span class='mute small'>all time ${total:.2f}, API-equivalent</span></h2>"
+        body.append(f"<h2 id=calls>Model calls <span class='mute small'>all time ${total:.2f}, API-equivalent</span></h2>"
                     f"<table><tr><th>when</th><th>board</th><th>call</th><th>model</th><th>time</th><th>cost</th><th></th></tr>{rows}</table>")
     page = ("<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
             f"<title>hearthwood</title><style>{CSS}</style></head><body><main>" + "\n".join(body) + "</main>"

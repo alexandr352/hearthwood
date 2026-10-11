@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 — 2026-10-11
+
+- **A new look for the page,** in the family of hearthwork's: outlined badges for severity
+  (HIGH, MEDIUM, LOW, INFO), verdicts (AGREE, DISAGREE) and proposal states; outlined chips for a
+  card's state, column and labels; quieter ids; the header's tools as a row of outlined buttons
+  (criteria, model calls, theme).
+- **NEXT** at the top of the page: the step `manager next` prints, and why.
+- **The card panel is on the right, 400 px wide.** On a wide screen the page makes room beside it;
+  on a narrow one it covers the page. Its close button says "close".
+- The numbers sit in one row beside the panel.
+
 ## 0.3.3 — 2026-10-11
 
 - **Card numbers in the page's sentences open the card.** The reading's summary, its points

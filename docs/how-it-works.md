@@ -162,11 +162,15 @@ they outrank everything else.
 `~/.hearthwood/log.html` is one self-contained file, rebuilt after every read, analysis and
 verdict. No server runs and no model writes it. It shows the numbers, the reading, the questions,
 the proposals and every finding.
+Its top line is the next step, the same one `manager next` prints. Badges say what kind of thing
+each line is: a finding's severity (HIGH, MEDIUM, LOW, INFO), your verdict (AGREE, DISAGREE), a
+proposal's state.
 
-**Every card number opens the card** in a panel on the left: its state, column, type and labels;
+**Every card number opens the card** in a panel on the right, 400 px wide: its state, column,
+type and labels;
 its parent, sub-items, dependencies and pull requests, each clickable in turn; its dates; the
 cards it reads most like; its description; and a link to the card in the tracker. On a screen
-1100 px wide or more the page moves to the right of the panel, so both can be read side by side; on
+1100 px wide or more the page makes room beside the panel, so both can be read side by side; on
 a narrower one the panel covers the page. ✕, Esc or the browser's Back button closes the panel, and
 so does a click outside it when it covers the page. Each open card has its own address
 (`log.html#card=LAN-7`, or `#card=<board>/<key>` when the home holds more than one board), so it

@@ -9,7 +9,7 @@ import subprocess
 import sys
 import textwrap
 
-from . import __version__, criteria, credentials, facts, home, reading, search, snapshot, spirit, worklog
+from . import __version__, criteria, credentials, facts, guide, home, reading, search, snapshot, spirit, worklog
 
 
 def out(msg=""):
@@ -347,35 +347,8 @@ def cmd_log(args):
     return 0
 
 
-def next_step():
-    h = home.home_dir()
-    if not (h / "config.toml").exists():
-        return "manager init", "set up the home"
-    bs = home.boards(h)
-    if not bs:
-        return "manager connect github --board <name> --repo <owner/repo>", "connect a board (or `manager connect markdown <folder>`)"
-    for b in bs:
-        if b.source == "github" and b.settings.get("token", "credentials") == "credentials" \
-                and not credentials.token_path(b).exists():
-            return f"manager connect token --board {b.name}", f"board {b.name} has no token"
-        if not b.latest_snapshot():
-            return f"manager read -b {b.name}", f"board {b.name} has not been read"
-        d = b.latest_analysis()
-        if not d:
-            return f"manager analyze -b {b.name}", f"board {b.name} has not been analysed"
-        r = reading.load(d) or {}
-        fx = json.loads((d / "facts.json").read_text(encoding="utf-8"))
-        done = {v["target"] for v in criteria.all_verdicts(h, b.name) if v.get("analysis") == d.name or v.get("kind") == "finding"}
-        waiting = [f"A{n}" for n in range(1, len(r.get("attention") or []) + 1)] + \
-                  [f["id"] for f in fx["findings"] if f["severity"] in ("high", "medium")]
-        open_ = [t for t in waiting if t not in done]
-        if open_:
-            return f"manager review -b {b.name}", f"{len(open_)} points of analysis {d.name} wait for your verdict"
-    return "manager analyze --read", "everything is answered; read the board again when it has moved"
-
-
 def cmd_next(args):
-    cmd, why = next_step()
+    cmd, why = guide.next_step()
     out(f"next: {cmd}")
     out(f"  ({why})")
     return 0
@@ -404,7 +377,7 @@ def cmd_status(args):
     rules = sum(1 for line in (h / "criteria.md").read_text(encoding="utf-8").splitlines()
                 if line.startswith("- ")) if (h / "criteria.md").exists() else 0
     out(f"\nverdicts given: {n}; criteria lines: {rules}")
-    cmd, why = next_step()
+    cmd, why = guide.next_step()
     out(f"next: {cmd}  ({why})")
     return 0
 

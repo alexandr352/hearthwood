@@ -98,6 +98,16 @@ class Page(unittest.TestCase):
         worklog.build(self.t.h)
         self.assertEqual(embedded((self.t.h / "log.html").read_text())["demo"]["LAN-7"]["assignees"], ["sam"])
 
+    def test_the_page_says_what_to_do_next(self):
+        page = self.build()
+        self.assertIn("<span class=nlabel>next</span><code>manager review -b demo</code>", page)
+
+    def test_badges_say_severity(self):
+        page = self.build()
+        self.assertIn("<span class='badge high'>high</span>", page)
+        self.assertIn("<span class='badge medium'>medium</span>", page)
+        self.assertNotIn("chip sev-", page)
+
     def test_the_panel_builds_nodes_from_text_only(self):
         self.assertNotIn("innerHTML", worklog.JS)
         self.assertNotIn("insertAdjacentHTML", worklog.JS)
