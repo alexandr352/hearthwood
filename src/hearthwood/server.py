@@ -24,7 +24,9 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import claude, home, spirit, worklog
+import re
+
+from . import claude, criteria, home, spirit, worklog
 
 KEY = secrets.token_urlsafe(24)
 CHAT_LOCK = threading.Lock()
@@ -69,7 +71,7 @@ def history_read(h):
 def stamp(h):
     """Changes whenever something the page shows changes: a read, an analysis, a verdict, a call."""
     m = 0.0
-    paths = [h / "criteria.md", h / "runs.jsonl"]
+    paths = [h / "criteria.md", h / "runs.jsonl", h / "verdicts.jsonl"]
     for b in home.boards(h):
         paths += [b.dir / "board.toml", b.snapshots, b.analyses]
         d = b.latest_analysis()
@@ -101,10 +103,69 @@ def describe_tool(name, inp, h=None):
     return name
 
 
-def context_for(about):
+NAME = re.compile(r"^[A-Za-z0-9#._-]{1,64}$")
+
+
+def locate(h, board, analysis):
+    """(board home, analysis folder) for names the page sent, or ValueError. Only an analysis folder that
+    exists under that board is ever touched."""
+    if not (isinstance(board, str) and NAME.match(board) and isinstance(analysis, str) and NAME.match(analysis)):
+        raise ValueError("a board and an analysis are needed")
+    b = next((x for x in home.boards(h) if x.name == board), None)
+    if b is None:
+        raise ValueError(f"no board {board!r}")
+    d = b.analyses / analysis
+    if not d.is_dir():
+        raise ValueError(f"no analysis {analysis!r} for board {board}")
+    return b, d
+
+
+def decide(h, body):
+    """Record what the person decided on the page, through the code `manager verdict`, `approve` and `reject` use.
+    Writes only the home's own records, never the board."""
+    b, d = locate(h, body.get("board"), body.get("analysis"))
+    target, act = str(body.get("target") or ""), str(body.get("act") or "")
+    why, answer = str(body.get("why") or "").strip()[:500], str(body.get("answer") or "").strip()[:500]
+    kind = criteria.resolve(d, target)[0]
+    if act in ("disagree", "reject") and not why:
+        raise ValueError("say why, in a line: the reason is what becomes a criterion")
+    if kind == "proposals":
+        if act not in ("approve", "reject"):
+            raise ValueError("a proposal is approved or rejected")
+        criteria.set_proposal(d, target, "approved" if act == "approve" else "rejected", why)
+        row = criteria.record(h, b, d, target, "agree" if act == "approve" else "disagree", why=why)
+    elif kind == "questions":
+        if act != "answer":
+            raise ValueError("a question takes an answer")
+        row = criteria.record(h, b, d, target, "", answer=answer)
+    else:
+        if act not in ("agree", "disagree"):
+            raise ValueError("a point or a finding is agreed or disagreed with")
+        row = criteria.record(h, b, d, target, act, why=why)
+    worklog.build(h)
+    return row
+
+
+def context_for(about, h=None):
     """What the person pointed at, said to the spirit before their message."""
     if not isinstance(about, dict):
         return ""
+    if about.get("ask") == "item" and h is not None:
+        try:
+            b, d = locate(h, about.get("board"), about.get("analysis"))
+            target = str(about.get("target") or "")
+            kind, _, keys, text = criteria.resolve(d, target)
+        except ValueError:
+            return ""
+        how = {"proposals": f"`manager approve {target} --why \"...\"` or `manager reject {target} --why \"...\"`",
+               "questions": f"`manager verdict {target} --answer \"...\"`"}.get(
+            kind, f"`manager verdict {target} agree|disagree --why \"...\"`")
+        what = {"attention": "point", "questions": "question", "proposals": "proposal"}.get(kind, "finding")
+        return (f"[The person wants to discuss {what} {target} of analysis {d.name} on board {b.name}: \"{text}\". "
+                f"It is in ../boards/{b.name}/analyses/{d.name}/ (reading.json, facts.json, proposals.json), and the cards "
+                f"it names ({', '.join(keys[:12]) or 'none'}) are under items/ there. Read them, explain what matters, and "
+                f"propose the concrete next step with the exact text they would post. When they decide, record it with "
+                f"{how} -b {b.name} --analysis {d.name}, in their words, and show the command.]\n\n")
     if about.get("ask") == "next":
         return ("[The person clicked the page's next step. Run `manager next`, and help them take that step: do it "
                 "for them where they ask, and show the command each time.]\n\n")
@@ -204,6 +265,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(HTTPStatus.OK, '{"ok":true}', "application/json")
         if url.path == "/api/chat":
             return self.chat(str(body.get("message") or "").strip(), body.get("about"))
+        if url.path == "/api/decide":
+            try:
+                row = decide(self.h, body)
+            except ValueError as e:
+                return self.send(HTTPStatus.BAD_REQUEST, str(e))
+            return self.send(HTTPStatus.OK, json.dumps({"verdict": row["verdict"], "target": row["target"]}), "application/json")
         return self.send(HTTPStatus.NOT_FOUND, "not found")
 
     # --- the chat ----------------------------------------------------------------
@@ -232,7 +299,7 @@ class Handler(BaseHTTPRequestHandler):
     def stream_spirit(self, message, about):
         h, sdir = self.h, spirit_dir(self.h)
         home.refresh_spirit(h)
-        prompt = context_for(about) + message
+        prompt = context_for(about, h) + message
         sid_path = session_path(h)
         sid = sid_path.read_text().strip() if sid_path.exists() else None
         tail, env = spirit.launch(h)
@@ -398,12 +465,29 @@ function show(on){if(WIDE.matches){document.body.classList.toggle('chat-hidden',
 document.getElementById('chat-min').onclick=function(){show(false)};pill.onclick=function(){show(true);input.focus()};
 try{if(localStorage.getItem('hearthwood-chat')==='0')document.body.classList.add('chat-hidden')}catch(e){}
 WIDE.addEventListener('change',paint);paint();
-function setAbout(a){about=a;aboutBox.hidden=!a;if(a)aboutBox.querySelector('span').textContent=a.ask==='next'?'the next step':'about card '+a.key+(a.board?' on '+a.board:'')}
+function setAbout(a){about=a;aboutBox.hidden=!a;if(a)aboutBox.querySelector('span').textContent=a.ask==='next'?'the next step':a.ask==='item'?'about '+a.target:'about card '+a.key+(a.board?' on '+a.board:'')}
 aboutBox.querySelector('button').onclick=function(){setAbout(null)};
 document.addEventListener('click',function(e){var b=e.target.closest?e.target.closest('button.ask'):null;if(!b)return;
-  var a=b.dataset.ask==='next'?{ask:'next'}:{ask:'card',board:b.dataset.board,key:b.dataset.key};setAbout(a);
+  var a=b.dataset.ask==='next'?{ask:'next'}:b.dataset.ask==='item'?{ask:'item',board:b.dataset.board,analysis:b.dataset.analysis,target:b.dataset.target}
+    :{ask:'card',board:b.dataset.board,key:b.dataset.key};setAbout(a);
   var pc=document.querySelector('#panel.open .close');if(pc)pc.click();show(true);input.focus();
-  if(!input.value)input.value=a.ask==='next'?'What is the next step, and can you take it with me?':'What should I know about '+a.key+'?';fit()});
+  if(!input.value)input.value=a.ask==='next'?'What is the next step, and can you take it with me?':a.ask==='item'?
+    'Let\'s discuss '+a.target+': what matters here, and what would you do?':'What should I know about '+a.key+'?';fit()});
+document.addEventListener('click',async function(e){var b=e.target.closest?e.target.closest('.acts button.act'):null;if(!b)return;
+  var row=b.closest('.acts'),act=b.dataset.act,why=row.querySelector('.whyline');
+  if(act==='change'){b.hidden=true;row.querySelector('.choices').hidden=false;return}
+  if(act==='disagree'||act==='reject'){row.dataset.pending=act;why.hidden=false;why.querySelector('input').focus();return}
+  if(act==='record')act=row.dataset.pending;
+  var input2=row.querySelector('input.why'),body={board:row.dataset.board,analysis:row.dataset.analysis,target:row.dataset.target,act:act};
+  if(act==='answer')body.answer=input2.value;else if(input2)body.why=input2.value;
+  row.querySelectorAll('button').forEach(function(x){x.disabled=true});var old=row.querySelector('.err');if(old)old.remove();
+  try{var r=await fetch('/api/decide',{method:'POST',headers:{'X-HW-Key':KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok)throw new Error(await r.text());location.reload()}
+  catch(err){var m=document.createElement('span');m.className='err';m.textContent=err.message||String(err);row.appendChild(m);
+    row.querySelectorAll('button').forEach(function(x){x.disabled=false})}});
+document.addEventListener('keydown',function(e){var i=e.target;if(!i.classList||!i.classList.contains('why'))return;var row=i.closest('.acts');
+  if(e.key==='Enter'){e.preventDefault();var go=row.querySelector('[data-act=record]')||row.querySelector('[data-act=answer]');if(go)go.click()}
+  if(e.key==='Escape'&&row.querySelector('.whyline')){row.querySelector('.whyline').hidden=true;delete row.dataset.pending}});
 document.getElementById('chat-new').onclick=function(){fetch('/api/new',{method:'POST',headers:{'X-HW-Key':KEY},body:'{}'});log.textContent='';
   add('msg sys','A new conversation. The spirit still remembers what it wrote to its memory.')};
 input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit()}});

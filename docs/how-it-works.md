@@ -221,6 +221,16 @@ ongoing session, kept when you reload; "new" starts another. Each answer is a mo
 under Model calls with its cost. When the board changes (a read, an analysis, a verdict), the page
 reloads itself unless you are typing.
 
+**Deciding on the page.** Every point of attention, question, proposal and finding carries its
+actions: **Discuss this with Spirit**, which opens the chat on that point (the spirit reads it and the
+cards it names, proposes the next step with the text you would post, and records your decision with
+`manager verdict` when you give it), and the verdict itself: agree or disagree for a point or a
+finding, approve or reject for a proposal, a line of answer for a question. Disagreeing and rejecting
+ask why in a line, because the reason is what becomes a criterion. Decisions are recorded by the
+same code as `manager verdict`, `approve` and `reject`, in your home and never on the board; a
+decided point shows its verdict and your reason, and "change" brings the buttons back. The static
+`log.html` shows the command to run instead.
+
 The server listens on 127.0.0.1 only and prints a link with a key made at each start: see
 [SECURITY](../SECURITY.md).
 

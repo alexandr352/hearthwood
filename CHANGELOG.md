@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0 — 2026-10-11
+
+- **Decide on the page.** With `manager ui`, every point of attention, question, proposal and
+  finding has **Discuss this with Spirit** and its verdict buttons: agree / disagree, approve /
+  reject, or an answer in a line. Disagree and reject ask why. Recorded by the same code as
+  `manager verdict`, `approve` and `reject`; never written to the board. "change" reopens a
+  decision. The static page shows the command instead.
+- **Discuss this with Spirit** tells the spirit the point, where its cards are, and how to record
+  your decision; it shows the command when it does. The card panel's and NEXT's buttons now read
+  "Discuss this card with Spirit" and "Discuss the next step with Spirit".
+
 ## 0.6.0 — 2026-10-11
 
 - **The spirit on the page.** `manager ui` serves the page with the spirit's chat in the right

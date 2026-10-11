@@ -63,7 +63,7 @@ class Served(unittest.TestCase):
         self.assertIn("<aside id=chat", page)
         self.assertIn(f'var KEY="{server.KEY}"', page)
         self.assertNotIn(server.worklog.CHAT, page)
-        self.assertIn("data-ask=next>do it with the spirit", page)
+        self.assertIn("data-ask=next>Discuss the next step with Spirit", page)
 
     def test_the_api_needs_the_key_in_a_header(self):
         self.assertEqual(self.call("GET", "/api/history", headers=self.cookie())[0], 403)
@@ -114,6 +114,67 @@ class Served(unittest.TestCase):
                          "read boards/demo/criteria.md")
         self.assertEqual(server.describe_tool("Bash", {"command": "manager next"}, h), "$ manager next")
         self.assertEqual(server.describe_tool("Glob", {"pattern": str(h)}, h), "glob .")
+
+    # --- deciding on the page -----------------------------------------------------------
+
+    def read_with_reading(self):
+        manager("analyze")
+        b = home.boards(self.t.h)[0]
+        return b, b.latest_analysis().name
+
+    def decide(self, **body):
+        return self.call("POST", "/api/decide", body=json.dumps(body), headers=self.api())
+
+    def test_agree_and_disagree_are_recorded_like_manager_verdict(self):
+        b, an = self.read_with_reading()
+        self.assertEqual(self.call("POST", "/api/decide", body="{}", headers=self.cookie())[0], 403)
+        self.assertEqual(self.decide(board="demo", analysis=an, target="A1", act="agree")[0], 200)
+        status, _, msg = self.decide(board="demo", analysis=an, target="A1", act="disagree")
+        self.assertEqual(status, 400)
+        self.assertIn("say why", msg)
+        self.assertEqual(self.decide(board="demo", analysis=an, target="A1", act="disagree", why="it is parked on purpose")[0], 200)
+        rows = home.read_jsonl(self.t.h / "verdicts.jsonl")
+        self.assertEqual([(r["target"], r["verdict"], r["why"]) for r in rows],
+                         [("A1", "agree", ""), ("A1", "disagree", "it is parked on purpose")])
+        self.assertIn("it is parked on purpose", (self.t.h / "log.html").read_text())
+
+    def test_questions_proposals_and_findings(self):
+        b, an = self.read_with_reading()
+        self.assertEqual(self.decide(board="demo", analysis=an, target="Q1", act="answer", answer="No, only merged work.")[0], 200)
+        self.assertEqual(self.decide(board="demo", analysis=an, target="P1", act="approve")[0], 200)
+        props = json.loads((b.analyses / an / "proposals.json").read_text())
+        self.assertEqual(props[0]["status"], "approved")
+        fid = json.loads((b.analyses / an / "facts.json").read_text())["findings"][0]["id"]
+        self.assertEqual(self.decide(board="demo", analysis=an, target=fid, act="agree")[0], 200)
+        self.assertEqual(self.decide(board="demo", analysis=an, target="P1", act="agree")[0], 400)
+
+    def test_only_real_boards_analyses_and_targets(self):
+        b, an = self.read_with_reading()
+        for body in ({"board": "../demo", "analysis": an, "target": "A1", "act": "agree"},
+                     {"board": "demo", "analysis": "../../x", "target": "A1", "act": "agree"},
+                     {"board": "demo", "analysis": "20000101-000000", "target": "A1", "act": "agree"},
+                     {"board": "demo", "analysis": an, "target": "A99", "act": "agree"},
+                     {"board": "nope", "analysis": an, "target": "A1", "act": "agree"}):
+            self.assertEqual(self.decide(**body)[0], 400, body)
+        self.assertFalse((self.t.h / "verdicts.jsonl").exists())
+
+    def test_discuss_tells_the_spirit_the_point_and_how_to_record_it(self):
+        b, an = self.read_with_reading()
+        about = {"ask": "item", "board": "demo", "analysis": an, "target": "A1"}
+        self.call("POST", "/api/chat", body=json.dumps({"message": "Go", "about": about}), headers=self.api())
+        prompt = self.t.calls()[-1]["prompt"]
+        self.assertTrue(prompt.startswith("[The person wants to discuss point A1 of analysis"))
+        self.assertIn("Merge the queue to unblock the replay", prompt)
+        self.assertIn(f"manager verdict A1 agree|disagree", prompt)
+        self.assertIn(f"-b demo --analysis {an}", prompt)
+
+    def test_the_page_offers_discuss_and_the_verdict_buttons(self):
+        b, an = self.read_with_reading()
+        page = self.call("GET", "/", headers=self.cookie())[2]
+        self.assertIn(f'data-ask=item data-board="demo" data-analysis="{an}" data-target="A1" data-kind=point>Discuss this with Spirit', page)
+        self.assertIn("data-act=agree>agree</button>", page)
+        self.assertIn("data-act=approve>approve</button>", page)
+        self.assertIn("data-act=answer>answer</button>", page)
 
     def test_new_forgets_the_conversation(self):
         self.call("POST", "/api/chat", body=json.dumps({"message": "hi"}), headers=self.api())

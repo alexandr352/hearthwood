@@ -94,6 +94,16 @@ table.narrow{width:auto;min-width:280px}tr.total td{border-top:2px solid var(--l
 #tip[hidden]{display:none}
 button.ask{background:none;border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:3px 10px;margin:8px 0 0;cursor:pointer;font:12px var(--font)}
 button.ask:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.acts{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}.acts button.ask{margin:0}
+.acts .answer,.acts .whyline{display:inline-flex;gap:6px;flex:1 1 260px;min-width:0}.acts [hidden]{display:none}
+button.act{background:none;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:3px 10px;cursor:pointer;font:12px var(--font)}
+button.act:hover{border-color:var(--mute)}button.act[data-act=agree]:hover,button.act[data-act=approve]:hover{border-color:var(--green);color:var(--green)}
+button.act[data-act=disagree]:hover,button.act[data-act=reject]:hover{border-color:var(--red);color:var(--red)}
+button.act:disabled{opacity:.5;cursor:wait}
+input.why{flex:1;min-width:0;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:13px var(--font)}
+input.why:focus{outline:none;border-color:var(--accent)}
+.acts .err{color:var(--red);font-size:12px;flex-basis:100%}
+.cmdhint{margin-top:8px;font:12px var(--font);color:var(--mute)}.cmdhint::before{content:'$ ';}
 @media (min-width:1100px){body.panel-open{padding-right:400px}body.panel-open #panel{box-shadow:none}}
 @media (prefers-reduced-motion:reduce){#panel,body{transition:none}}
 """
@@ -151,7 +161,7 @@ function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board
     P.appendChild(el('h3',null,'Description'));P.appendChild(linked(b,(c.body||'').trim()||'(empty)'))}
   if(/^https?:\/\//.test(c.url||'')){var a=el('a',null,/^https:\/\/github\.com\//.test(c.url)?'Open on GitHub':'Open in the tracker');
     a.href=c.url;a.rel='noopener';var pp=el('p','small');pp.appendChild(a);P.appendChild(pp)}
-  if(document.getElementById('chat')){var ask=el('button','ask','ask the spirit about this card');ask.type='button';
+  if(document.getElementById('chat')){var ask=el('button','ask','Discuss this card with Spirit');ask.type='button';
     ask.dataset.ask='card';ask.dataset.board=b;ask.dataset.key=k;P.appendChild(ask)}
   P.classList.add('open');document.body.classList.add('panel-open');P.setAttribute('aria-hidden','false');P.scrollTop=0;x.focus()}
 function close(){if(!P.classList.contains('open'))return;P.classList.remove('open');document.body.classList.remove('panel-open');P.setAttribute('aria-hidden','true');
@@ -293,7 +303,41 @@ def embed(obj):
     return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
 
 
-def board_section(h, b, extra_ref=()):
+ACTS = {"point": (("agree", "agree"), ("disagree", "disagree")),
+        "finding": (("agree", "agree"), ("disagree", "disagree")),
+        "proposal": (("approve", "approve"), ("reject", "reject")),
+        "question": ()}
+
+
+def _acts(kind, target, b, d, decided, ui, many):
+    """What a person can do about one point. On the `manager ui` page: Discuss this with Spirit, and the
+    verdict buttons, recorded through the same code as `manager verdict`. On the static page: the command."""
+    flag = f" -b {b.name}" if many else ""
+    if not ui:
+        if decided:
+            return ""
+        cmd = {"point": f'manager verdict {target} agree --why "…"{flag}',
+               "finding": f'manager verdict {target} agree --why "…"{flag}',
+               "question": f'manager verdict {target} --answer "…"{flag}',
+               "proposal": f'manager approve {target} --why "…"{flag}'}[kind]
+        return f"<div class=cmdhint>{E(cmd)}</div>"
+    attrs = f'data-board="{E(b.name)}" data-analysis="{E(d.name)}" data-target="{E(target)}" data-kind={kind}'
+    buttons = [f"<button type=button class=ask data-ask=item {attrs}>Discuss this with Spirit</button>"]
+    if kind == "question":
+        buttons.append("<span class=answer><input class=why type=text maxlength=500 placeholder='your answer, in a line' "
+                       "aria-label='your answer'><button type=button class=act data-act=answer>answer</button></span>")
+    else:
+        buttons += [f"<button type=button class=act data-act={a}>{E(label)}</button>" for a, label in ACTS[kind]]
+        buttons.append("<span class=whyline hidden><input class=why type=text maxlength=500 placeholder='why, in a line' "
+                       "aria-label='why, in a line'><button type=button class=act data-act=record>record</button></span>")
+    row = "".join(buttons)
+    if decided:
+        return (f"<div class='acts done' {attrs}><button type=button class=act data-act=change>change</button>"
+                f"<span class=choices hidden>{row}</span></div>")
+    return f"<div class=acts {attrs}>{row}</div>"
+
+
+def board_section(h, b, extra_ref=(), ui=False, many=False):
     snap = b.latest_snapshot()
     d = b.latest_analysis()
     parts = [f"<h2>{E(b.name)}<span class=where>{E(b.source)} · {E(b.where)}</span></h2>"]
@@ -330,7 +374,9 @@ def board_section(h, b, extra_ref=()):
                          + (f"<span class=badge>{E(a['confidence'])} confidence</span>" if a.get('confidence') else "")
                          + (f"<span class='badge {E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
                          + f"</div><div class=keys>{_keys(a.get('keys', []), items, ref)}</div><p>{_prose(a['why'], items, ref)}</p>"
-                         f"<p class=small><b>Next step:</b> {_prose(a['next_step'], items, ref)}</p></div>")
+                         f"<p class=small><b>Next step:</b> {_prose(a['next_step'], items, ref)}</p>"
+                         + (f"<p class='mute small'>Your reason: {E(v['why'])}</p>" if v and v.get("why") else "")
+                         + _acts("point", f"A{n}", b, d, bool(v), ui, many) + "</div>")
         qs = r.get("questions") or []
         if qs:
             parts.append("<h2>Questions</h2>")
@@ -338,7 +384,8 @@ def board_section(h, b, extra_ref=()):
                 v = verdicts.get(f"Q{n}")
                 parts.append(f"<div class=card><div class=row><span class=id>Q{n}</span><span class=badge>for {E(q.get('for', ''))}</span>"
                              f"{_prose(q['question'], items, ref)}</div>"
-                             + (f"<p class=small><b>Answered:</b> {E(v.get('answer', ''))}</p>" if v else "") + "</div>")
+                             + (f"<p class=small><b>Answered:</b> {E(v.get('answer', ''))}</p>" if v else "")
+                             + _acts("question", f"Q{n}", b, d, bool(v), ui, many) + "</div>")
         try:
             props = json.loads((d / "proposals.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -348,7 +395,9 @@ def board_section(h, b, extra_ref=()):
             for p in props:
                 parts.append(f"<div class=card><div class=row><span class=id>{E(p['id'])}</span><span class=badge>{E(p['action'])}</span>"
                              f"<span class='badge {E(p.get('status', 'proposed'))}'>{E(p.get('status', 'proposed'))}</span>{_keys(p.get('keys', []), items, ref)}</div>"
-                             f"<p>{_prose(p['change'], items, ref)}</p><p class='mute small'>{_prose(p['why'], items, ref)}</p></div>")
+                             f"<p>{_prose(p['change'], items, ref)}</p><p class='mute small'>{_prose(p['why'], items, ref)}</p>"
+                             + (f"<p class='mute small'>Your reason: {E(p['why_status'])}</p>" if p.get("why_status") else "")
+                             + _acts("proposal", p["id"], b, d, p.get("status", "proposed") != "proposed", ui, many) + "</div>")
     elif (d / "reading-broken.json").exists() or (d / "reading-failed.txt").exists():
         parts.append("<p class=mute>The reading did not complete for this analysis; the facts below stand alone.</p>")
     else:
@@ -366,7 +415,7 @@ def board_section(h, b, extra_ref=()):
                      + (f"<span class='badge {E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
                      + f"</span></summary><p>{_prose(f['says'], items, ref)}</p><div class=keys>{_keys(f['keys'], items, ref)}</div>"
                      + (f"<p class='mute small'>Your reason: {E(v['why'])}</p>" if v and v.get("why") else "")
-                     + "</details>")
+                     + _acts("finding", f["id"], b, d, bool(v), ui, many) + "</details>")
     people = bool(b.settings["rules"].get("people"))
     ref |= {k for k in extra_ref if k in items}
     cards = card_data(items, ref, facts.get("similar") or {}, people,
@@ -522,7 +571,7 @@ def render(h=None, ui=False):
             "<button type=button role=tab data-tab=stats aria-selected=false>Stats</button></nav>",
             "<div class=view data-view=active>",
             f"<div class=nextstep><span class=nlabel>next</span><code>{E(cmd)}</code><div class=hint>{E(why)}</div>"
-            + ("<button type=button class=ask data-ask=next>do it with the spirit</button>" if ui else "") + "</div>"]
+            + ("<button type=button class=ask data-ask=next>Discuss the next step with Spirit</button>" if ui else "") + "</div>"]
     views_all, views_stats = [], []
     bs = home.boards(h)
     if not bs:
@@ -530,7 +579,7 @@ def render(h=None, ui=False):
     for b in bs:
         sparts, sref = stats_section(b)
         body.append(f"<section class=board data-board=\"{E(b.name)}\">")
-        body += board_section(h, b, sref)
+        body += board_section(h, b, sref, ui=ui, many=len(bs) > 1)
         body.append("</section>")
         views_all += [f"<section class=board data-board=\"{E(b.name)}\">"] + all_section(b) + ["</section>"]
         views_stats += [f"<section class=board data-board=\"{E(b.name)}\">"] + sparts + ["</section>"]

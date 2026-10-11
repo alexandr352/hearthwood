@@ -125,6 +125,12 @@ class Page(unittest.TestCase):
         self.assertIn('data-tip="', svg)
         self.assertIn("Table view", page)
 
+    def test_the_static_page_shows_the_command_instead_of_buttons(self):
+        page = self.build()
+        self.assertIn('<div class=cmdhint>manager verdict', page)
+        self.assertNotIn("<div class=acts", page)
+        self.assertNotIn("Discuss this with Spirit", page)
+
     def test_the_panel_builds_nodes_from_text_only(self):
         self.assertNotIn("innerHTML", worklog.JS)
         self.assertNotIn("insertAdjacentHTML", worklog.JS)

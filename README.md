@@ -13,7 +13,7 @@ approve or reject it, and it remembers which.
                                         └──── criteria.md ◄─────┴── verdicts ◄──┘
 ```
 
-![The page served by manager ui after one reading of the demo board: the next step, the board's numbers and the points that need attention on the left; on the right, the spirit's chat, with the commands it ran and its answer, whose card numbers are links](docs/screenshot.png)
+![The page served by manager ui: points of attention, one agreed with its reason shown and a change link, the next ones with Discuss this with Spirit, agree and disagree; on the right, the spirit's chat, where it recorded that verdict with manager verdict and offered to keep the reason as a rule](docs/screenshot.png)
 
 It is the sister of [hearthwork](https://github.com/alexandr352/hearthwork), which runs
 development tickets. Hearthwood looks after the board those tickets live on.
@@ -37,7 +37,7 @@ development tickets. Hearthwood looks after the board those tickets live on.
   names must exist, and every fact it cites must be real. An answer that fails goes back to the
   same session with the problem named.
 - **Learns how you judge.** You agree or disagree with each point and give your reason in a
-  line. A reason you would apply again becomes a rule in `criteria.md`, in your words, and it
+  line, on the page with a click or by discussing it with the spirit, or with `manager review`. A reason you would apply again becomes a rule in `criteria.md`, in your words, and it
   outranks the reading's defaults from then on.
 - **Shows it all on one page.** `~/.hearthwood/log.html` is a static page with no server, in three
   tabs: Active (what needs you), All (every card, with a filter) and Stats (the board's numbers,
