@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 — 2026-10-11
+
+- **Cards open on the page.** Every card number on `log.html` opens the card in a panel on the
+  left. The panel shows state, column, labels, parent, sub-items, dependencies, pull requests,
+  dates, the cards it reads most like and the full description, and links to the tracker. Esc, ✕,
+  a click outside or Back closes it, and `#card=<key>` opens a card directly. The page carries the
+  cards it mentions, and stubs for the cards they point to. A card's text is shown as text, never
+  run. Assignees stay out unless `people = true`.
+- `facts.json` keeps each open card's closest matches (`similar`).
+
 ## 0.2.1 — 2026-10-11
 
 - **README.** Says what a markdown board is and links its format; names the full-text duplicate

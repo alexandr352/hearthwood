@@ -39,7 +39,8 @@ development tickets. Hearthwood looks after the board those tickets live on.
 - **Learns how you judge.** You agree or disagree with each point and give your reason in a
   line. A reason you would apply again becomes a rule in `criteria.md`, in your words, and it
   outranks the reading's defaults from then on.
-- **Shows it all on one page.** `~/.hearthwood/log.html` is a static page with no server.
+- **Shows it all on one page.** `~/.hearthwood/log.html` is a static page with no server. Click
+  any card number to read the card in a side panel.
 - **Has a spirit to talk to.** `manager chat` opens a Claude Code session that knows the home
   and walks through an analysis with you.
 
@@ -135,7 +136,7 @@ your usage limits, not out of money. Every call is listed on the page.
 
 - [Commands](docs/commands.md): every command and its options.
 - [How it works](docs/how-it-works.md): the snapshot, every rule, the reading and its contract,
-  and the fence.
+  the page, and the fence.
 - [Connecting](docs/connecting.md): GitHub tokens and permissions, the markdown format, and Jira
   (planned).
 - [Criteria](docs/criteria.md): how verdicts become rules, and how to share what you have taught it.

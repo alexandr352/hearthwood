@@ -475,6 +475,7 @@ class Analysis:
     def to_dict(self):
         return {"board": self.board.name, "fetched_at": self.board.fetched_at, "notes": self.board.notes,
                 "flow": self.flow, "ready": self.ready, "search": self.search,
+                "similar": {k: v for k, v in self.similar.items() if self.items[k].state == "open"},
                 "findings": [asdict(f) for f in self.findings]}
 
     def search_line(self):

@@ -157,6 +157,27 @@ Its instructions are short:
 **Your criteria replace any of these.** They come first in the mission, and the instructions say
 they outrank everything else.
 
+## 4. The page
+
+`~/.hearthwood/log.html` is one self-contained file, rebuilt after every read, analysis and
+verdict. No server runs and no model writes it. It shows the numbers, the reading, the questions,
+the proposals and every finding.
+
+**Every card number opens the card** in a panel on the left: its state, column, type and labels;
+its parent, sub-items, dependencies and pull requests, each clickable in turn; its dates; the
+cards it reads most like; its description; and a link to the card in the tracker. ✕, Esc, a click
+outside or the browser's Back button closes the panel. Each open card has its own address
+(`log.html#card=LAN-7`, or `#card=<board>/<key>` when the home holds more than one board), so it
+can be bookmarked or sent.
+
+The page carries only the cards it mentions, whole, and the cards those point to (a parent, a
+dependency, a close match) as a title and a state. On a board of 728 cards it carried 104 whole
+and 235 as titles, and the page weighed 575 KB.
+
+A card's text is shown, never run: the panel builds every line with plain text and no HTML, and
+the embedded cards are escaped so that no card can close the element that holds them. Assignees
+are not on the page unless the board has `people = true`.
+
 ## The fence
 
 Every tool call of a hearthwood session passes `src/hearthwood/fence.py`, a Claude Code
