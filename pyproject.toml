@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hearthwood"
+version = "0.1.0"
+description = "Read a project board, see what needs attention, and teach it how you judge. A companion for project managers, built on Claude Code."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Alexandr Fedoseev" }]
+keywords = ["project-management", "claude-code", "github-projects", "kanban", "agents"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: POSIX",
+  "Environment :: Console",
+  "Topic :: Office/Business :: Scheduling",
+]
+dependencies = ["tomli>=1.1; python_version < '3.11'"]
+
+[project.scripts]
+manager = "hearthwood.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/alexandr352/hearthwood"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+hearthwood = ["doctrine/**/*.md", "doctrine/*.md"]
