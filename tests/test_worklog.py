@@ -104,6 +104,44 @@ class Page(unittest.TestCase):
         self.assertNotIn("</script", worklog.JS)
 
 
+class Prose(unittest.TestCase):
+    """Card numbers inside the reading's sentences and the findings' sentences open the card."""
+
+    def read(self, summary, why):
+        with TempHome() as t:
+            self.assertEqual(manager("connect", "markdown", str(DEMO), "--board", "demo"), 0)
+            self.assertEqual(manager("analyze", "--read"), 0)
+            d = sorted((t.h / "boards" / "demo" / "analyses").iterdir())[-1]
+            r = json.loads((d / "reading.json").read_text())
+            r["summary"], r["attention"][0]["why"] = summary, why
+            (d / "reading.json").write_text(json.dumps(r))
+            worklog.build(t.h)
+            return (t.h / "log.html").read_text()
+
+    def test_a_card_named_in_the_reading_opens(self):
+        page = self.read("LAN-19 was closed as not planned.", "LAN-2 and LAN-20 are both done.")
+        self.assertIn('<button type=button class=key data-key="LAN-19">LAN-19</button> was closed', page)
+        self.assertIn('<button type=button class=key data-key="LAN-20">LAN-20</button> are both', page)
+        self.assertFalse(embedded(page)["demo"]["LAN-19"].get("stub"))
+
+    def test_only_real_cards_as_whole_words(self):
+        page = self.read("Not LAN-99, xLAN-2, LAN-2x or #LAN-2.", "nothing")
+        self.assertIn("Not LAN-99, xLAN-2, LAN-2x or #LAN-2.", page)
+
+    def test_a_reading_cannot_inject_markup(self):
+        page = self.read("LAN-19 " + HOSTILE, "LAN-2</script><b>x</b>")
+        self.assertNotIn("<script>window.PWNED", page)
+        self.assertNotIn("<img src=x", page)
+        self.assertIn('data-key="LAN-2">LAN-2</button>&lt;/script&gt;&lt;b&gt;x', page)
+
+    def test_the_findings_sentences_link_too(self):
+        with TempHome() as t:
+            manager("connect", "markdown", str(DEMO), "--board", "demo")
+            manager("analyze", "--read", "--facts-only")
+            page = (t.h / "log.html").read_text()
+        self.assertRegex(page, r'<p>[^<]*<button type=button class=key data-key="LAN-18">LAN-18</button> &quot;Rich text')
+
+
 class Embed(unittest.TestCase):
     def test_no_less_than_sign_survives(self):
         raw = worklog.embed({"a": "</script><b>"})

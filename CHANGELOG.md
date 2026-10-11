@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.3 — 2026-10-11
+
+- **Card numbers in the page's sentences open the card.** The reading's summary, its points
+  (title, why, next step), questions and proposals, and each finding's title and sentence now link
+  every card number they name, by the same rule as descriptions: real cards on the board, whole
+  words. A card named there is carried whole. Each piece of text around a number is escaped on its
+  own. Clicking a number in a finding's title opens the card without expanding the finding.
+
 ## 0.3.2 — 2026-10-11
 
 - **Card numbers in a description open the card.** "Depends on LAN-2" links to LAN-2. Only the

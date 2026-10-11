@@ -10,6 +10,7 @@ state, column, link), so a card number met anywhere in the panel, a description 
 
 import html
 import json
+import re
 
 from . import __version__, criteria, home, reading
 
@@ -108,7 +109,7 @@ function close(){if(!P.classList.contains('open'))return;P.classList.remove('ope
   if(location.hash.indexOf('#card=')===0)location.hash='';if(last&&document.contains(last))last.focus();last=null}
 function sync(){var r=parse();if(r)show(r[0],r[1]);else close()}
 document.addEventListener('click',function(e){var t=e.target.closest?e.target.closest('button.key'):null;
-  if(t){var sec=P.contains(t)?P:t.closest('[data-board]');var b=sec?sec.dataset.board:boards[0];
+  if(t){e.preventDefault();var sec=P.contains(t)?P:t.closest('[data-board]');var b=sec?sec.dataset.board:boards[0];
     if(!P.contains(t))last=t;var h='#'+hashOf(b,t.dataset.key);if(location.hash===h)sync();else location.hash=h;return}
   if(P.classList.contains('open')&&!P.contains(e.target)&&!WIDE.matches)close()});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
@@ -128,6 +129,29 @@ def _keys(keys, items, ref):
         else:
             out.append(E(k))
     return " ".join(out) + (f' <span class=mute>+{len(keys) - 20}</span>' if len(keys) > 20 else "")
+
+
+KEY = re.compile(r"#\d+|[A-Z][A-Z0-9_]*-\d+")
+
+
+def _prose(text, items, ref):
+    """Escaped text in which every whole-word number of a real card on the board is a button that opens it.
+    The text is cut around each number and every piece escaped on its own, so no text becomes markup.
+    The same rule as the panel's descriptions: LAN-2 inside LAN-20, xLAN-2 or #LAN-2 stays text."""
+    text = text or ""
+    out, at = [], 0
+    for m in KEY.finditer(text):
+        k = m.group(0)
+        before = text[m.start() - 1] if m.start() else ""
+        after = text[m.end():m.end() + 1]
+        if (before and re.match(r"[\w#-]", before)) or (after and re.match(r"[\w-]", after)) or k not in items:
+            continue
+        out.append(E(text[at:m.start()]))
+        ref.add(k)
+        out.append(f'<button type=button class=key data-key="{E(k)}">{E(k)}</button>')
+        at = m.end()
+    out.append(E(text[at:]))
+    return "".join(out)
 
 
 CARD_FIELDS = ("key", "title", "state", "close_reason", "column", "kind", "labels", "parent", "children", "blocked_by",
@@ -190,21 +214,21 @@ def board_section(h, b):
         if v.get("analysis") == d.name or v.get("kind") == "finding":
             verdicts[v["target"] if v.get("kind") != "finding" else v["target"]] = v
     if r:
-        parts.append(f"<h2>What needs attention</h2><div class=card>{E(r.get('summary', ''))}</div>")
+        parts.append(f"<h2>What needs attention</h2><div class=card>{_prose(r.get('summary', ''), items, ref)}</div>")
         for n, a in enumerate(r.get("attention") or [], 1):
             v = verdicts.get(f"A{n}")
-            parts.append(f"<div class=card><div class=row><code>A{n}</code><h3>{E(a['title'])}</h3>"
+            parts.append(f"<div class=card><div class=row><code>A{n}</code><h3>{_prose(a['title'], items, ref)}</h3>"
                          f"<span class=chip>{E(a.get('confidence', ''))}</span>"
                          + (f"<span class='chip v-{E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
-                         + f"</div><div class=small>{_keys(a.get('keys', []), items, ref)}</div><p>{E(a['why'])}</p>"
-                         f"<p class=small><b>Next step:</b> {E(a['next_step'])}</p></div>")
+                         + f"</div><div class=small>{_keys(a.get('keys', []), items, ref)}</div><p>{_prose(a['why'], items, ref)}</p>"
+                         f"<p class=small><b>Next step:</b> {_prose(a['next_step'], items, ref)}</p></div>")
         qs = r.get("questions") or []
         if qs:
             parts.append("<h2>Questions</h2>")
             for n, q in enumerate(qs, 1):
                 v = verdicts.get(f"Q{n}")
                 parts.append(f"<div class=card><div class=row><code>Q{n}</code><span class=chip>for {E(q.get('for', ''))}</span>"
-                             f"{E(q['question'])}</div>"
+                             f"{_prose(q['question'], items, ref)}</div>"
                              + (f"<p class=small><b>Answered:</b> {E(v.get('answer', ''))}</p>" if v else "") + "</div>")
         try:
             props = json.loads((d / "proposals.json").read_text(encoding="utf-8"))
@@ -215,7 +239,7 @@ def board_section(h, b):
             for p in props:
                 parts.append(f"<div class=card><div class=row><code>{E(p['id'])}</code><span class=chip>{E(p['action'])}</span>"
                              f"<span class=chip>{E(p.get('status', 'proposed'))}</span>{_keys(p.get('keys', []), items, ref)}</div>"
-                             f"<p>{E(p['change'])}</p><p class='mute small'>{E(p['why'])}</p></div>")
+                             f"<p>{_prose(p['change'], items, ref)}</p><p class='mute small'>{_prose(p['why'], items, ref)}</p></div>")
     elif (d / "reading-broken.json").exists() or (d / "reading-failed.txt").exists():
         parts.append("<p class=mute>The reading did not complete for this analysis; the facts below stand alone.</p>")
     else:
@@ -229,9 +253,9 @@ def board_section(h, b):
             continue
         v = verdicts.get(f["id"])
         parts.append(f"<details class=card><summary><span class=row><code>{E(f['id'])}</code>"
-                     f"<span class='chip sev-{E(f['severity'])}'>{E(f['severity'])}</span>{E(f['title'])}"
+                     f"<span class='chip sev-{E(f['severity'])}'>{E(f['severity'])}</span><span>{_prose(f['title'], items, ref)}</span>"
                      + (f"<span class='chip v-{E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
-                     + f"</span></summary><p>{E(f['says'])}</p><div class=small>{_keys(f['keys'], items, ref)}</div>"
+                     + f"</span></summary><p>{_prose(f['says'], items, ref)}</p><div class=small>{_keys(f['keys'], items, ref)}</div>"
                      + (f"<p class='mute small'>Your reason: {E(v['why'])}</p>" if v and v.get("why") else "")
                      + "</details>")
     people = bool(b.settings["rules"].get("people"))
