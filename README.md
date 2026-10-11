@@ -8,9 +8,9 @@ Hearthwood **reads only**. It never writes to your board. When it suggests a cha
 approve or reject it, and it remembers which.
 
 ```
- your board ──read──► snapshot ──► facts (plain code) ──► reading (Claude) ──► you
-                                        ▲                       ▲               │
-                                        └──── criteria.md ◄─────┴── verdicts ◄──┘
+ your board ── read ──► snapshot ──► facts (plain code) ──► reading (Claude) ──► you
+                                          ▲                       ▲               │
+                                          └──── criteria.md ◄─────┴── verdicts ◄──┘
 ```
 
 ![The page served by manager ui after one reading of the demo board: the tabs, the next step, the board's numbers, the summary and the first point of attention with Discuss this with Spirit, agree and disagree; on the right, the spirit discussing that point, with the cards it opened and what it found](docs/screenshot.png)
