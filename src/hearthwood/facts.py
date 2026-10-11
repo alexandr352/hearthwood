@@ -16,6 +16,8 @@ import statistics
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 
+from . import search
+
 SEVERITIES = ("high", "medium", "low", "info")
 STOP = {"a", "an", "the", "to", "of", "in", "on", "for", "and", "or", "with", "is", "be", "by", "at", "as",
         "from", "into", "it", "its", "this", "that", "when", "not", "no"}
@@ -68,6 +70,8 @@ class Analysis:
         self.now = now or parse_ts(board.fetched_at) or datetime.now(timezone.utc)
         self.items = board.by_key()
         self.findings = []
+        self.search = {}
+        self.similar = {}
 
     # --- reading an item ----------------------------------------------------
 
@@ -314,7 +318,62 @@ class Analysis:
                          f"{len(here)} open items are in {col} against a limit of {limit}: "
                          + ", ".join(i.key for i in here) + ".", {"column": col, "count": len(here), "limit": limit})
 
+    def linked(self, a, b):
+        """Two items the board already ties together: parent and sub-item, or a dependency either way."""
+        A, B = self.items[a], self.items[b]
+        return (A.parent == b or B.parent == a or b in A.children or a in B.children
+                or b in self.deps(A) or a in self.deps(B) or b in A.blocking or a in B.blocking)
+
     def r_duplicates(self):
+        """Items that read alike: open twins, and open work that reads like work already finished."""
+        if self.rules.get("duplicate_search", "full-text") == "titles" or not search.available():
+            why = ("" if self.rules.get("duplicate_search") == "titles"
+                   else " (this Python's SQLite has no FTS5, so full-text search is off)")
+            self.search = {"method": "titles", "why": why.strip(" ()")}
+            return self.r_duplicates_by_title()
+        k = int(self.rules.get("duplicate_candidates", 5))
+        thr = float(self.rules.get("duplicate_match", 0.5))
+        with search.Index(self.board.items) as index:
+            self.search = {"method": "full-text", "searched": len(index), "k": k}
+            self.similar = {it.key: index.similar(it, k) for it in self.board.items}
+        # A pair is named when each item is the other's closest match the board does not already tie to
+        # it, and both directions reach `duplicate_match`. Measured on a 728-item board, the looser "each
+        # in the other's top k" named 51 pairs at 0.5, most of them clusters of related work; this, 16.
+        closest = {}
+        for key, hits in self.similar.items():
+            free = [(o, m) for o, m in hits if not self.linked(key, o)]
+            closest[key] = free[0] if free else (None, 0.0)
+        seen = set()
+        for it in sorted(self.open_items(), key=lambda i: _num(i.key)):
+            other, m = closest[it.key]
+            if other is None or closest[other][0] != it.key:
+                continue
+            pair = tuple(sorted((it.key, other), key=_num))
+            both = min(m, closest[other][1])
+            if pair in seen or both < thr:
+                continue
+            seen.add(pair)
+            O = self.items[other]
+            ev = {"match": both, "method": "full-text"}
+            if O.state == "open":
+                a, b = (self.items[x] for x in pair)
+                self.add("duplicate", "low", f"{a.key} and {b.key} read alike", list(pair),
+                         f"{a.key} \"{a.title}\" and {b.key} \"{b.title}\" are each other's closest match by the "
+                         f"words of their titles and descriptions (match {both:.2f}). "
+                         "The same work twice, or two halves that should name each other?", ev)
+            elif O.close_reason not in ("not_planned", "duplicate"):
+                self.add("done-before", "low", f"{it.key} reads like {O.key}, already finished", [it.key, O.key],
+                         f"{it.key} \"{it.title}\" reads most like {O.key} \"{O.title}\", closed "
+                         f"{O.closed[:10] or 'earlier'}, and the other way round (match {both:.2f}). Already done, "
+                         "or a follow-up that should say which work it follows?", ev)
+        # Nearly the same title is a duplicate however the descriptions differ: a thin card twinning a
+        # full one reads weakly against the full one's own words, and the search alone would let it pass.
+        for a, b, sim in self.title_twins():
+            if (a, b) not in seen and not self.linked(a, b):
+                self.add_title_twin(a, b, sim)
+
+    def title_twins(self):
+        """[(a, b, similarity)]: open items whose titles share at least `duplicate_similarity` of their words."""
         thr = float(self.rules.get("duplicate_similarity", 0.7))
         words = {}
         for it in self.open_items():
@@ -322,17 +381,24 @@ class Analysis:
             if len(w) >= 3:
                 words[it.key] = w
         keys = sorted(words, key=_num)
+        out = []
         for i, a in enumerate(keys):
             for b in keys[i + 1:]:
                 inter = len(words[a] & words[b])
-                if not inter:
-                    continue
-                sim = inter / len(words[a] | words[b])
-                if sim >= thr:
-                    A, B = self.items[a], self.items[b]
-                    self.add("duplicate", "low", f"{a} and {b} look alike", [a, b],
-                             f"{a} \"{A.title}\" and {b} \"{B.title}\" share {int(sim * 100)}% of their title words. "
-                             "The same work twice, or two halves that should name each other?", {"similarity": round(sim, 2)})
+                if inter and inter / len(words[a] | words[b]) >= thr:
+                    out.append((a, b, round(inter / len(words[a] | words[b]), 2)))
+        return out
+
+    def add_title_twin(self, a, b, sim):
+        A, B = self.items[a], self.items[b]
+        self.add("duplicate", "low", f"{a} and {b} look alike", [a, b],
+                 f"{a} \"{A.title}\" and {b} \"{B.title}\" share {int(sim * 100)}% of their title words. "
+                 "The same work twice, or two halves that should name each other?",
+                 {"similarity": sim, "method": "titles"})
+
+    def r_duplicates_by_title(self):
+        for a, b, sim in self.title_twins():
+            self.add_title_twin(a, b, sim)
 
     def r_unplaced(self):
         items = self.open_items()
@@ -408,13 +474,39 @@ class Analysis:
 
     def to_dict(self):
         return {"board": self.board.name, "fetched_at": self.board.fetched_at, "notes": self.board.notes,
-                "flow": self.flow, "ready": self.ready, "findings": [asdict(f) for f in self.findings]}
+                "flow": self.flow, "ready": self.ready, "search": self.search,
+                "findings": [asdict(f) for f in self.findings]}
+
+    def search_line(self):
+        s = self.search
+        if s.get("method") == "full-text":
+            return (f"Duplicates were searched by full text over the title and description of all {s['searched']} "
+                    f"items, open and closed; similar.md lists each open item's {s['k']} closest.")
+        return "Duplicates were compared by title words only" + (f" ({s['why']})." if s.get("why") else ".")
+
+    def similar_markdown(self):
+        """For the reading: every open item's closest matches. Candidates, never verdicts."""
+        if not self.similar:
+            return "# Items that read alike\n\n(not searched: " + self.search_line() + ")\n"
+        k, n = self.search["k"], self.search["searched"]
+        out = ["# Items that read alike", "",
+               f"For every open item, the {k} of {n} items (open and closed) whose titles and descriptions read most "
+               "like it, closest first. match 1.00 = as close as the item is to itself. These are CANDIDATES: most "
+               "close matches are related work (the same screen, the same file), not the same work twice. Open both "
+               "items before you call two of them duplicates. (linked) = the board already ties the two together.", ""]
+        for it in sorted(self.open_items(), key=lambda i: _num(i.key)):
+            hits = self.similar.get(it.key) or []
+            cells = [f"{o} {m:.2f}" + (" (linked)" if self.linked(it.key, o) else "")
+                     + (f" ({self.items[o].state})" if self.items[o].state != "open" else "") for o, m in hits]
+            out.append(f"{it.key} | " + (" | ".join(cells) if cells else "-"))
+        return "\n".join(out) + "\n"
 
     def to_markdown(self, verdicts=None):
         verdicts = verdicts or {}
         f = self.flow
         out = [f"# Facts of board {self.board.name}", "",
-               f"Read {self.board.fetched_at} from {self.board.source} {self.board.where}.", ""]
+               f"Read {self.board.fetched_at} from {self.board.source} {self.board.where}.", "",
+               self.search_line(), ""]
         if self.board.notes:
             out += ["## What could not be read", ""] + [f"- {n}" for n in self.board.notes] + [""]
         out += ["## Flow", "",

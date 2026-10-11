@@ -135,6 +135,8 @@ your usage limits, not out of money. Every call is listed on the page.
 - [Connecting](docs/connecting.md): GitHub tokens and permissions, the markdown format, and Jira
   (planned).
 - [Criteria](docs/criteria.md): how verdicts become rules, and how to share what you have taught it.
+- [Finding duplicates](docs/experiments/duplicate-search.md): an experiment on a real board, full-text
+  search against embeddings, and what hearthwood does with the result.
 - [People and privacy](docs/people-and-privacy.md): what is read, what leaves your machine, and
   what never does.
 - [Contributing](CONTRIBUTING.md) and [Changelog](CHANGELOG.md).

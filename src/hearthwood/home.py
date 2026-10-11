@@ -69,7 +69,10 @@ parked = ["Backlog", "Icebox"]               # deliberately not now
 [rules]
 blocking_labels = ["blocked", "needs:*"]     # a label that stops work; * matches anything
 stale_days = 7                               # active or in review, untouched this long
-duplicate_similarity = 0.7                   # 0..1, how alike two open titles must be
+duplicate_search = "full-text"               # full-text (title and description) | titles
+duplicate_match = 0.5                        # 0..1, how closely two items must read alike (full-text)
+duplicate_candidates = 5                     # closest matches kept per item, for the reading
+duplicate_similarity = 0.7                   # 0..1, how alike two open titles must be (titles)
 closed_days = 60                             # closed items read for the flow numbers
 # Work in progress limits per column, e.g. {{ "In Progress" = 3, "In Review" = 5 }}
 wip = {{}}

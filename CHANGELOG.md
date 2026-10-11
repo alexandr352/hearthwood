@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0 — 2026-10-11
+
+- **Duplicates by full text.** Possible duplicates are now found by searching titles AND
+  descriptions with SQLite FTS5, over open and closed items alike, where 0.1 compared open
+  titles only. A pair is named when each item is the other's closest match and the board
+  does not already tie them; open items with nearly the same title are still named too. New
+  rule `done-before`: open work that reads like work already completed. Why full-text search and not embeddings:
+  [Finding duplicates](docs/experiments/duplicate-search.md).
+- **similar.md.** The reading is handed every open item's closest matches, marked as
+  candidates, and decides what is the same work and what is only related.
+- **New settings:** `duplicate_search`, `duplicate_match`, `duplicate_candidates`. Where a
+  Python's SQLite lacks FTS5, the title rule runs instead, and `facts.md` and
+  `manager doctor` say so.
+
 ## 0.1.0 — 2026-10-11
 
 The first version: read, analyse, and learn how you judge. Nothing is written to a board.

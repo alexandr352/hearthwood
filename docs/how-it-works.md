@@ -75,7 +75,8 @@ it is never "ready" and never "not moving".
 | `parent-closed-children-open` | medium | A closed parent with open sub-items. |
 | `children-done-parent-open` | low | An open parent all of whose sub-items (at least two) are closed. |
 | `wip` | medium | A column over its work-in-progress limit (`wip` in `board.toml`). |
-| `duplicate` | low | Two open items whose titles share at least `duplicate_similarity` of their words. They are named, never closed. |
+| `duplicate` | low | Two open items that are each other's closest match by the words of their titles and descriptions, at least `duplicate_match` alike, and not already tied by the board (parent and sub-item, or a dependency); or two open items whose titles share at least `duplicate_similarity` of their words. They are named, never closed. How the search works, and why it is full-text search and not embeddings: [Finding duplicates](experiments/duplicate-search.md). |
+| `done-before` | low | An open item and a completed one that are each other's closest match, at least `duplicate_match` alike: already done, or a follow-up that should say which work it follows. |
 | `no-column` | low | Open items on no column. |
 | `no-parent` | low | Items in play that belong to no parent, on a board where most items have one. |
 | `thin` | low | Items in play with almost no description. |
@@ -97,6 +98,7 @@ Beside the rules, `flow` gives numbers rather than findings:
 | --- | --- |
 | `facts.json`, `facts.md` | the findings and flow, for programs and for people |
 | `board.md` | every item, one per line |
+| `similar.md` | for every open item, the items whose titles and descriptions read most like it: candidates, never verdicts |
 | `items/` | one file per item, with its description and column history |
 | `criteria.md` | a copy of your criteria as they were for this reading |
 | `CLAUDE.md` | the reading's instructions ([source](../src/hearthwood/doctrine/analyst/CLAUDE.md)) |

@@ -136,6 +136,7 @@ def prepare(b, board, analysis, verdicts):
     (d / "facts.json").write_text(json.dumps(analysis.to_dict(), indent=1, ensure_ascii=False), encoding="utf-8")
     (d / "facts.md").write_text(analysis.to_markdown(verdicts), encoding="utf-8")
     (d / "board.md").write_text(facts.board_index(board, analysis), encoding="utf-8")
+    (d / "similar.md").write_text(analysis.similar_markdown(), encoding="utf-8")
     for it in board.items:
         (d / "items" / facts.item_file_name(it.key)).write_text(facts.item_markdown(it, people), encoding="utf-8")
     crit = b.home / "criteria.md"
@@ -154,7 +155,8 @@ def mission(d):
         SCHEMA,
         "",
         "board.md in this folder lists every item, one per line; items/<number>.md holds one item whole. Read "
-        "what you need to be sure; cite only keys that exist.",
+        "what you need to be sure; cite only keys that exist. similar.md lists, for every open item, the items "
+        "that read most like it: candidates for duplicates and for work already done, never verdicts.",
         "",
         "=== criteria.md (the person's own criteria; they outrank your defaults) ===",
         (d / "criteria.md").read_text(encoding="utf-8"),

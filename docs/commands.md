@@ -66,7 +66,10 @@ one. Commands about an analysis use the latest one unless you name another with
 | `[columns] startable`, `active`, `review`, `done`, `parked` | which of your columns play which role ([How it works](how-it-works.md#column-roles)) |
 | `[rules] blocking_labels` | labels that stop work; `*` matches anything, e.g. `needs:*` |
 | `[rules] stale_days` | days without an update before active or in-review work counts as not moving |
-| `[rules] duplicate_similarity` | 0 to 1: how alike two open titles must be to be named as possible duplicates |
+| `[rules] duplicate_search` | `full-text` (the default: titles and descriptions, by SQLite FTS5) or `titles` (title words only) |
+| `[rules] duplicate_match` | 0 to 1: how closely two items must read alike to be named (full-text); 1 is as close as an item is to itself |
+| `[rules] duplicate_candidates` | how many closest matches per item go into `similar.md` for the reading |
+| `[rules] duplicate_similarity` | 0 to 1: how alike two open titles must be to be named (titles) |
 | `[rules] closed_days` | how far back closed items are read |
 | `[rules] wip` | limits per column, e.g. `{ "In Progress" = 3 }` |
 | `[rules] people`, `person_wip` | off by default; see [People and privacy](people-and-privacy.md) |

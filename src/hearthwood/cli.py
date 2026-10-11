@@ -4,11 +4,12 @@ import argparse
 import json
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import textwrap
 
-from . import __version__, criteria, credentials, facts, home, reading, snapshot, spirit, worklog
+from . import __version__, criteria, credentials, facts, home, reading, search, snapshot, spirit, worklog
 
 
 def out(msg=""):
@@ -435,6 +436,10 @@ def cmd_doctor(args):
 
     out(f"hearthwood {__version__}")
     line(sys.version_info >= (3, 10), f"Python {sys.version.split()[0]}")
+    if search.available():
+        line(True, f"SQLite {sqlite3.sqlite_version} with FTS5: duplicates are searched by full text")
+    else:
+        out(f"  --   SQLite {sqlite3.sqlite_version} has no FTS5: duplicates are compared by title words only")
     cfg = home.config(h)
     claude_bin = shutil.which(cfg["claude"]["bin"])
     line(bool(claude_bin), f"Claude Code CLI: {claude_bin or 'not found (' + cfg['claude']['bin'] + ')'}")
