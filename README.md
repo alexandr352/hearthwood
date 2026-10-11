@@ -21,12 +21,16 @@ development tickets. Hearthwood looks after the board those tickets live on.
 ## What it does
 
 - **Reads a board.** It reads GitHub issues and a GitHub Projects board. It also reads a folder
-  of markdown tickets, which is how the demo works. Jira is next. Everything is kept as a snapshot
-  on your machine, so an analysis can always be looked at again and argued with.
+  of markdown files, one ticket per file with a few header lines
+  ([format](docs/connecting.md#a-folder-of-markdown-files)); the demo board is one. Jira is
+  next. Everything is kept as a snapshot on your machine, so an analysis can always be looked
+  at again and argued with.
 - **Works out the facts with plain code first.** What is ready to start, with every dependency
   finished. What is blocked, and by what. What has not moved in a week. Where the board and the
-  pull requests disagree. Loops, duplicates, goals with nothing left in them. Each fact comes with
-  an id and a sentence saying why. [How it works](docs/how-it-works.md) lists every rule.
+  pull requests disagree. Loops, goals with nothing left in them. Duplicates, found by searching
+  titles and descriptions, and open work that reads like work already finished
+  ([why full-text search](docs/experiments/duplicate-search.md)). Each fact comes with an id
+  and a sentence saying why. [How it works](docs/how-it-works.md) lists every rule.
 - **Has Claude read it once.** The reading gets the facts and your criteria. It may open any
   ticket in the snapshot. It says what needs your attention, most important first. It asks what
   the board cannot tell it, and proposes changes. Its answer is checked by code: every ticket it
@@ -41,8 +45,8 @@ development tickets. Hearthwood looks after the board those tickets live on.
 
 ## What it does not do
 
-- It does not write to your board. This is version 0.1, so approving a proposal records your
-  decision and prints the change for you to make by hand.
+- It does not write to your board. Not yet: approving a proposal records your decision and
+  prints the change for you to make by hand.
 - It does not judge people. It looks at the work. Assignees stay out of everything unless you
   turn `people = true` on for a board, and even then it shows load, never a score. See
   [People and privacy](docs/people-and-privacy.md).

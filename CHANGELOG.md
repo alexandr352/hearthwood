@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — 2026-10-11
+
+- **README.** Says what a markdown board is and links its format; names the full-text duplicate
+  search and `done-before`; no longer calls itself version 0.1.
+
 ## 0.2.0 — 2026-10-11
 
 - **Duplicates by full text.** Possible duplicates are now found by searching titles AND
