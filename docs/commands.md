@@ -32,6 +32,9 @@ one. Commands about an analysis use the latest one unless you name another with
 | `manager verdict <id\|A<n>> agree\|disagree\|wrong-reason\|not-now [--why "..."] [--rule "..."]` | Records one verdict, the same as in `review`. `--rule` also keeps a rule in your criteria. |
 | `manager verdict Q<n> --answer "..." [--rule "..."]` | Answers one of the reading's questions. |
 | `manager approve P<n> [--why "..."]`, `manager reject P<n> [--why "..."]` | Records your decision on a proposal. Nothing is written to the board; an approval prints the change for you to make. |
+
+Each of these takes `-b <board>` when the home has more than one board, and `--analysis <stamp>` for
+an analysis other than the latest. The page's buttons (`manager ui`) record through the same code.
 | `manager criteria` | Shows your criteria and how your verdicts fall per rule. |
 | `manager criteria add "..."` | Adds a rule, in your words. |
 | `manager criteria edit` | Opens `criteria.md` in `$VISUAL`, `$EDITOR`, or `nano`. |

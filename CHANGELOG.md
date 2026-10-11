@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.1 — 2026-10-11
+
+- **The spirit knows the page.** Its instructions say it may be talked to on the page, what the
+  person can do there, that its card numbers become links, and to record a decision about what the
+  person pointed at with that board and analysis. They are refreshed whenever `manager chat` or
+  `manager ui` starts, so installing this version is enough.
+- **Docs.** The README's demo and daily loop lead with `manager ui`; Cost lists a spirit message;
+  "What it does not do" says the spirit sends what it reads to Claude, as the reading does.
+  Commands notes `-b` and `--analysis` on the verdict commands; Contributing has the server's rule.
+
 ## 0.7.0 — 2026-10-11
 
 - **Decide on the page.** With `manager ui`, every point of attention, question, proposal and

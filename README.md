@@ -54,8 +54,9 @@ development tickets. Hearthwood looks after the board those tickets live on.
 - It does not judge people. It looks at the work. Assignees stay out of everything unless you
   turn `people = true` on for a board, and even then it shows load, never a score. See
   [People and privacy](docs/people-and-privacy.md).
-- It sends nothing anywhere on its own. The one exception is the reading, which hands the facts
-  and the ticket text to Claude, as any Claude Code session would.
+- It sends nothing anywhere on its own. The reading hands the facts and the ticket text to
+  Claude, as any Claude Code session would, and so does the spirit with what it reads when you
+  talk to it.
 
 ## Install
 
@@ -89,9 +90,12 @@ manager connect markdown examples/demo-board --board demo
 manager read
 manager analyze --facts-only     # the facts alone: no model call, no cost
 manager analyze                  # the facts, then one reading (about $0.10 with Sonnet)
-manager review                   # agree or disagree, one point at a time
-manager log --open
+manager ui                       # the page with the spirit beside it; decide there, or discuss
 ```
+
+`manager ui` opens the page in your browser, served on this machine only. Each point has
+**Discuss this with Spirit** and its verdict buttons. Without the server, `manager review` asks
+for your verdicts in the terminal and `manager log --open` opens the same page, static.
 
 ## Use it on your GitHub board
 
@@ -114,9 +118,12 @@ sit before it counts as not moving.
 
 ```sh
 manager analyze --read           # a fresh snapshot, the facts, one reading
-manager review                   # your verdicts; keep the good reasons as rules
+manager ui                       # decide on the page, or discuss a point with the spirit
 manager criteria                 # what you have taught it so far
 ```
+
+In the terminal, `manager review` asks for the same verdicts one point at a time, and
+`manager chat` is the same spirit.
 
 `manager next` always names the one next step. `manager status` says where things stand.
 
@@ -130,6 +137,10 @@ one Claude Code session:
 | the demo board, 20 tickets | Sonnet | 37 s | $0.10 |
 | a real board, 724 issues (527 open) | Sonnet | 32 s | $0.18 |
 
+Talking with the spirit costs per message. On the demo board, with Sonnet: a first answer, for
+which it reads the analysis and the cards, took 11 to 18 s and $0.05 to $0.07; a follow-up in the
+same conversation, 6 s and about $0.01.
+
 The default reading model is Opus, which costs more and reads more carefully. Set
 `analyst = "sonnet"` under `[models]` in `~/.hearthwood/config.toml` to change it, or use
 `manager analyze --model sonnet` for a single run. On a Claude subscription the cost comes out of
@@ -139,7 +150,7 @@ your usage limits, not out of money. Every call is listed on the page.
 
 - [Commands](docs/commands.md): every command and its options.
 - [How it works](docs/how-it-works.md): the snapshot, every rule, the reading and its contract,
-  the page, and the fence.
+  the page and its tabs, the spirit on the page, deciding there, and the fence.
 - [Connecting](docs/connecting.md): GitHub tokens and permissions, the markdown format, and Jira
   (planned).
 - [Criteria](docs/criteria.md): how verdicts become rules, and how to share what you have taught it.

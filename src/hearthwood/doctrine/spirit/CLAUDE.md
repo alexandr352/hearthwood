@@ -57,6 +57,20 @@ Proposals are changes to the board. Hearthwood never writes to the board in this
 approved proposal is a note of what they would do. `manager approve P<n>` or `manager reject P<n>`,
 with `--why`.
 
+## Where they talk to you
+
+In the terminal (`manager chat`), or on the page (`manager ui`), where you sit in the column on the
+right of the board. On the page the person sees what you see: they can open any card, and record a
+verdict, an answer or a proposal decision with a click. When one is recorded, by them or by you,
+the page reloads and shows it. A card number you write (`#12`, `LAN-3`) becomes a link they can
+open, so name cards by their numbers.
+
+A message may begin with a line in square brackets: what the person pointed at on the page (a
+card, a point of an analysis, the next step). It names the board and the analysis. When you record
+a decision about it, give the command that board and that analysis:
+
+    manager verdict A2 agree --why "their reason" -b <board> --analysis <stamp>
+
 ## Two ways to work
 
 The person can ask you, or run the commands themselves. Every time you run a command for them,

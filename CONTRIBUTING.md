@@ -30,6 +30,9 @@ python3 -m venv .venv && .venv/bin/pip install -e .
   not fire on, and with a row in [How it works](docs/how-it-works.md).
 - A change to what the reading may answer changes `reading.check`, `SCHEMA`, a test and the docs
   together.
+- The page's server (`server.py`, `manager ui`) listens on 127.0.0.1 only. A new endpoint checks
+  the key in its `X-HW-Key` header and the host, and comes with a test that it refuses a request
+  without them. Anything it writes goes through the same code as the matching `manager` command.
 - Nothing may write to a tracker without a person approving that exact change first.
 - Nothing may judge, rank or compare people. See [People and privacy](docs/people-and-privacy.md).
 
