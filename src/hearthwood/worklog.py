@@ -4,8 +4,8 @@ No server and no model writes it. Open ~/.hearthwood/log.html in a browser; relo
 
 A card number on the page opens that card in a panel. The page carries the cards it mentions, whole,
 as JSON beside the board's section, and the panel's script builds every node with textContent: a
-card's text is shown, never run. Cards the page only points to (a parent, a dependency, a close
-match) are carried as a stub: key, title, state, column, link.
+card's text is shown, never run. Every other card on the board is carried as a stub (key, title,
+state, column, link), so a card number met anywhere in the panel, a description included, opens.
 """
 
 import html
@@ -33,7 +33,7 @@ button.theme{margin-left:auto;background:var(--panel);color:var(--ink);border:1p
 .v-agree{color:var(--green)}.v-disagree{color:var(--red)}
 a{color:var(--accent)}code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--chip);padding:0 4px;border-radius:4px}
 pre{white-space:pre-wrap;word-break:break-word;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
-details>summary{cursor:pointer}
+details>summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:baseline}details>summary::-webkit-details-marker{display:none}details>summary::before{content:'▸';color:var(--mute);flex:none}details[open]>summary::before{content:'▾'}
 table{border-collapse:collapse;width:100%;font-size:13px}td,th{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
 button.key{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 button.key:hover,button.key:focus-visible{color:var(--ink)}
@@ -65,6 +65,11 @@ function key(b,k,extra){var c=card(b,k);if(!c)return txt(k+(extra||''));var x=el
   x.title=c.title||'';var s=el('span');s.appendChild(x);if(extra)s.appendChild(txt(extra));return s}
 function keys(b,ks){var s=el('span');(ks||[]).forEach(function(k,i){if(i)s.appendChild(txt(', '));s.appendChild(key(b,k))});return s}
 function row(dl,label,node){if(!node)return;dl.appendChild(el('dt',null,label));var d=el('dd');d.appendChild(typeof node==='string'?txt(node):node);dl.appendChild(d)}
+function linked(b,text){var d=el('div','desc'),re=/#\d+|[A-Z][A-Z0-9_]*-\d+/g,at=0,m;
+  while((m=re.exec(text))){var before=m.index?text.charAt(m.index-1):'',after=text.charAt(m.index+m[0].length);
+    if(/[\w#-]/.test(before)||/[\w-]/.test(after)||!card(b,m[0]))continue;
+    if(m.index>at)d.appendChild(txt(text.slice(at,m.index)));d.appendChild(key(b,m[0]));at=m.index+m[0].length}
+  if(at<text.length)d.appendChild(txt(text.slice(at)));return d}
 function day(x){return x?String(x).slice(0,10):''}
 function state(c){return c.state+(c.close_reason?' ('+String(c.close_reason).replace('_',' ')+')':'')}
 function hashOf(b,k){return 'card='+(boards.length>1?encodeURIComponent(b)+'/':'')+encodeURIComponent(k)}
@@ -76,7 +81,7 @@ function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board
   var hd=el('header');var h=el('h2',null,k+' '+(c.title||''));h.id='panel-title';hd.appendChild(h);
   var x=el('button','close','✕');x.type='button';x.setAttribute('aria-label','Close');x.onclick=close;hd.appendChild(x);P.appendChild(hd);
   var chips=el('div','row');[state(c),c.column,c.kind].concat(c.labels||[]).forEach(function(v){if(v)chips.appendChild(el('span','chip',v))});P.appendChild(chips);
-  if(c.stub){P.appendChild(el('p','mute small','Only the cards this page mentions are carried whole; this one is pointed to.'))}
+  if(c.stub){P.appendChild(el('p','mute small','The page carries in full only the cards it mentions; this card\'s description is not on it.'))}
   else{var dl=el('dl');
     row(dl,'parent',c.parent?key(b,c.parent):null);
     row(dl,'sub-items',c.children&&c.children.length?keys(b,c.children):null);
@@ -95,7 +100,7 @@ function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board
       c.similar.forEach(function(m,i){if(i)ul.appendChild(txt(' · '));var o=card(b,m[0]);
         ul.appendChild(key(b,m[0],' '+Number(m[1]).toFixed(2)+(o&&o.state&&o.state!=='open'?' ('+o.state+')':'')))});
       P.appendChild(ul);P.appendChild(el('p','mute small','A search, not a verdict: close matches are often related work.'))}
-    P.appendChild(el('h3',null,'Description'));P.appendChild(el('div','desc',(c.body||'').trim()||'(empty)'))}
+    P.appendChild(el('h3',null,'Description'));P.appendChild(linked(b,(c.body||'').trim()||'(empty)'))}
   if(/^https?:\/\//.test(c.url||'')){var a=el('a',null,/^https:\/\/github\.com\//.test(c.url)?'Open on GitHub':'Open in the tracker');
     a.href=c.url;a.rel='noopener';var pp=el('p','small');pp.appendChild(a);P.appendChild(pp)}
   P.classList.add('open');document.body.classList.add('panel-open');P.setAttribute('aria-hidden','false');P.scrollTop=0;x.focus()}
@@ -130,7 +135,8 @@ CARD_FIELDS = ("key", "title", "state", "close_reason", "column", "kind", "label
 
 
 def card_data(items, ref, similar, people):
-    """What the panel shows: the cards in `ref` whole, the cards they point to as stubs."""
+    """What the panel shows: the cards in `ref` whole, every other card on the board as a stub, so any card
+    number the panel meets, in a field or in a description, opens something."""
     cards = {}
     for k in sorted(ref):
         it = items[k]
@@ -142,19 +148,10 @@ def card_data(items, ref, similar, people):
         if people:
             c["assignees"] = it.get("assignees") or []
         cards[k] = c
-    pointed = set()
-    for c in cards.values():
-        pointed.update([c["parent"]] if c["parent"] else [])
-        pointed.update(c["children"] or [])
-        pointed.update(c["blocked_by"] or [])
-        pointed.update(c["blocking"] or [])
-        pointed.update(c["depends_in_text"])
-        pointed.update(o for o, _ in c["similar"])
-    for k in sorted(pointed - set(cards)):
-        if k in items:
-            it = items[k]
-            cards[k] = {"key": k, "title": it.get("title"), "state": it.get("state"), "column": it.get("column"),
-                        "close_reason": it.get("close_reason"), "url": it.get("url"), "stub": True}
+    for k in sorted(set(items) - set(cards)):
+        it = items[k]
+        cards[k] = {"key": k, "title": it.get("title"), "state": it.get("state"), "column": it.get("column"),
+                    "close_reason": it.get("close_reason"), "url": it.get("url"), "stub": True}
     return cards
 
 

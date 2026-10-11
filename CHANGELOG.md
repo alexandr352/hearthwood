@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.2 — 2026-10-11
+
+- **Card numbers in a description open the card.** "Depends on LAN-2" links to LAN-2. Only the
+  numbers of real cards on the board are linked, as whole words; anything else stays text.
+- **Every card can open.** The page carries every card on the board, the ones it does not
+  mention as title, state and column (on a 728-card board: +95 KB).
+- **The findings' arrow** sits on the same line as the finding, not above it.
+- The screenshot shows the page beside the panel.
+
 ## 0.3.1 — 2026-10-11
 
 - **The page moves aside for the panel.** On a screen 1100 px wide or more, the page shifts right of

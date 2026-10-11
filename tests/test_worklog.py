@@ -59,6 +59,17 @@ class Page(unittest.TestCase):
             if c.get("stub"):
                 self.assertNotIn("body", c)
 
+    def test_every_card_on_the_board_can_open(self):
+        page = self.build()
+        cards = embedded(page)["demo"]
+        self.assertEqual(set(cards), {p.stem for p in DEMO.glob("LAN-*.md")})
+        self.assertTrue(cards["LAN-2"]["stub"])
+        self.assertEqual(cards["LAN-2"]["title"], "Store notes in a local database")
+
+    def test_the_finding_arrow_is_drawn_on_the_summary_line(self):
+        self.assertIn("details>summary::-webkit-details-marker{display:none}", worklog.CSS)
+        self.assertIn("content:'\u25b8'", worklog.CSS)
+
     def test_a_card_keeps_its_closest_matches(self):
         page = self.build()
         cards = embedded(page)["demo"]

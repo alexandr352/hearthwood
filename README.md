@@ -13,7 +13,7 @@ approve or reject it, and it remembers which.
                                         └──── criteria.md ◄─────┴── verdicts ◄──┘
 ```
 
-![The page after one reading of the demo board, with card LAN-3 open in the side panel: its parent, dependency, the card it blocks, its pull request, the cards it reads most like and its description. Behind it: the board's numbers and the points that need attention, one already agreed with](docs/screenshot.png)
+![The page after one reading of the demo board, with card LAN-3 open in the side panel and the page beside it: the card's parent, dependency, the card it blocks, its pull request, the cards it reads most like and its description, where LAN-2 is a link. Beside it: the board's numbers and the points that need attention, one already agreed with](docs/screenshot.png)
 
 It is the sister of [hearthwork](https://github.com/alexandr352/hearthwork), which runs
 development tickets. Hearthwood looks after the board those tickets live on.

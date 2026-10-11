@@ -172,9 +172,13 @@ so does a click outside it when it covers the page. Each open card has its own a
 (`log.html#card=LAN-7`, or `#card=<board>/<key>` when the home holds more than one board), so it
 can be bookmarked or sent.
 
-The page carries only the cards it mentions, whole, and the cards those point to (a parent, a
-dependency, a close match) as a title and a state. On a board of 728 cards it carried 104 whole
-and 235 as titles, and the page weighed 575 KB.
+A card number written inside a description opens that card too, when it is a card on the board
+(`#12` on GitHub, `LAN-2` in a markdown board): a pull request's number, or a key that only looks
+like one, stays text.
+
+The page carries the cards it mentions whole, and every other card on the board as its title,
+state and column, so any card number opens something. On a board of 728 cards it carried 104
+whole and 624 as titles, and the page weighed 670 KB.
 
 A card's text is shown, never run: the panel builds every line with plain text and no HTML, and
 the embedded cards are escaped so that no card can close the element that holds them. Assignees
