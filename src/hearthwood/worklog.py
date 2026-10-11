@@ -18,7 +18,7 @@ CSS = """
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#151613;--panel:#1e201b;--ink:#e9e8e0;--mute:#9a9b8f;--line:#33352e;--green:#58b07c;--amber:#d9a441;--red:#e0654e;--accent:#93b76c;--chip:#2a2d25}}
 :root[data-theme=dark]{--bg:#151613;--panel:#1e201b;--ink:#e9e8e0;--mute:#9a9b8f;--line:#33352e;--green:#58b07c;--amber:#d9a441;--red:#e0654e;--accent:#93b76c;--chip:#2a2d25}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
+main{max-width:1040px;margin:0 auto;padding:20px 16px 60px;transition:margin-left .18s ease}
 header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:12px}
 h1{font-size:20px;margin:0}h1 span{color:var(--accent)}h2{font-size:16px;margin:28px 0 8px}h3{font-size:14px;margin:0}
 .mute{color:var(--mute)}.small{font-size:13px}
@@ -47,14 +47,15 @@ box-shadow:4px 0 24px rgba(0,0,0,.18);transform:translateX(-105%);transition:tra
 #panel dt{color:var(--mute)}#panel dd{margin:0;overflow-wrap:anywhere}
 #panel .desc{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
 #panel h3{font-size:13px;color:var(--mute);margin:14px 0 4px;font-weight:600}
-@media (prefers-reduced-motion:reduce){#panel{transition:none}}
+@media (min-width:1100px){body.panel-open main{margin-left:max(460px,calc((100% - 1040px)/2));margin-right:auto}body.panel-open #panel{box-shadow:none}}
+@media (prefers-reduced-motion:reduce){#panel,main{transition:none}}
 """
 
 E = html.escape
 
 JS = r"""
 (function(){
-var P=document.getElementById('panel'),data={},last=null;
+var P=document.getElementById('panel'),data={},last=null,WIDE=matchMedia('(min-width:1100px)');
 document.querySelectorAll('script.cards').forEach(function(s){try{data[s.dataset.board]=JSON.parse(s.textContent)}catch(e){}});
 var boards=Object.keys(data);
 function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
@@ -97,14 +98,14 @@ function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board
     P.appendChild(el('h3',null,'Description'));P.appendChild(el('div','desc',(c.body||'').trim()||'(empty)'))}
   if(/^https?:\/\//.test(c.url||'')){var a=el('a',null,/^https:\/\/github\.com\//.test(c.url)?'Open on GitHub':'Open in the tracker');
     a.href=c.url;a.rel='noopener';var pp=el('p','small');pp.appendChild(a);P.appendChild(pp)}
-  P.classList.add('open');P.setAttribute('aria-hidden','false');P.scrollTop=0;x.focus()}
-function close(){if(!P.classList.contains('open'))return;P.classList.remove('open');P.setAttribute('aria-hidden','true');
+  P.classList.add('open');document.body.classList.add('panel-open');P.setAttribute('aria-hidden','false');P.scrollTop=0;x.focus()}
+function close(){if(!P.classList.contains('open'))return;P.classList.remove('open');document.body.classList.remove('panel-open');P.setAttribute('aria-hidden','true');
   if(location.hash.indexOf('#card=')===0)location.hash='';if(last&&document.contains(last))last.focus();last=null}
 function sync(){var r=parse();if(r)show(r[0],r[1]);else close()}
 document.addEventListener('click',function(e){var t=e.target.closest?e.target.closest('button.key'):null;
   if(t){var sec=P.contains(t)?P:t.closest('[data-board]');var b=sec?sec.dataset.board:boards[0];
     if(!P.contains(t))last=t;var h='#'+hashOf(b,t.dataset.key);if(location.hash===h)sync();else location.hash=h;return}
-  if(P.classList.contains('open')&&!P.contains(e.target))close()});
+  if(P.classList.contains('open')&&!P.contains(e.target)&&!WIDE.matches)close()});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
 window.addEventListener('hashchange',sync);
 sync();

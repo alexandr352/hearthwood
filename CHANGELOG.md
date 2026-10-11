@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 — 2026-10-11
+
+- **The page moves aside for the panel.** On a screen 1100 px wide or more, the page shifts right of
+  the card panel instead of sitting under it, and a click on the page no longer closes the panel.
+  On a narrower screen the panel covers the page, as before.
+
 ## 0.3.0 — 2026-10-11
 
 - **Cards open on the page.** Every card number on `log.html` opens the card in a panel on the

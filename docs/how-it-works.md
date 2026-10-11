@@ -165,8 +165,10 @@ the proposals and every finding.
 
 **Every card number opens the card** in a panel on the left: its state, column, type and labels;
 its parent, sub-items, dependencies and pull requests, each clickable in turn; its dates; the
-cards it reads most like; its description; and a link to the card in the tracker. ✕, Esc, a click
-outside or the browser's Back button closes the panel. Each open card has its own address
+cards it reads most like; its description; and a link to the card in the tracker. On a screen
+1100 px wide or more the page moves to the right of the panel, so both can be read side by side; on
+a narrower one the panel covers the page. ✕, Esc or the browser's Back button closes the panel, and
+so does a click outside it when it covers the page. Each open card has its own address
 (`log.html#card=LAN-7`, or `#card=<board>/<key>` when the home holds more than one board), so it
 can be bookmarked or sent.
 
