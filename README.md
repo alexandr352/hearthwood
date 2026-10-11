@@ -13,7 +13,7 @@ approve or reject it, and it remembers which.
                                         └──── criteria.md ◄─────┴── verdicts ◄──┘
 ```
 
-![The page served by manager ui: points of attention, one agreed with its reason shown and a change link, the next ones with Discuss this with Spirit, agree and disagree; on the right, the spirit's chat, where it recorded that verdict with manager verdict and offered to keep the reason as a rule](docs/screenshot.png)
+![The page served by manager ui after one reading of the demo board: the tabs, the next step, the board's numbers, the summary and the first point of attention with Discuss this with Spirit, agree and disagree; on the right, the spirit discussing that point, with the cards it opened and what it found](docs/screenshot.png)
 
 It is the sister of [hearthwork](https://github.com/alexandr352/hearthwork), which runs
 development tickets. Hearthwood looks after the board those tickets live on.
