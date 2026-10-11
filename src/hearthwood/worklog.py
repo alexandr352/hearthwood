@@ -17,10 +17,10 @@ from . import __version__, criteria, guide, home, reading, stats
 from .model import Board
 
 CSS = """
-:root{--bg:#f6f4ee;--panel:#fff;--ink:#22231f;--mute:#6b6c62;--line:#e1ddd2;--green:#2f7d4f;--amber:#b47b10;--red:#b8412d;--accent:#55743a;--chip:#eef0e6;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a}
+:root{--font:"Adwaita Mono",ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;--bg:#f6f4ee;--panel:#fff;--ink:#22231f;--mute:#6b6c62;--line:#e1ddd2;--green:#2f7d4f;--amber:#b47b10;--red:#b8412d;--accent:#55743a;--chip:#eef0e6;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#151613;--panel:#1e201b;--ink:#e9e8e0;--mute:#9a9b8f;--line:#33352e;--green:#58b07c;--amber:#d9a441;--red:#e0654e;--accent:#93b76c;--chip:#2a2d25;--s1:#3987e5;--s2:#d95926;--s3:#199e70}}
 :root[data-theme=dark]{--bg:#151613;--panel:#1e201b;--ink:#e9e8e0;--mute:#9a9b8f;--line:#33352e;--green:#58b07c;--amber:#d9a441;--red:#e0654e;--accent:#93b76c;--chip:#2a2d25;--s1:#3987e5;--s2:#d95926;--s3:#199e70}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;transition:padding-right .18s ease}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);transition:padding-right .18s ease}
 main{max-width:980px;margin:0 auto;padding:24px 16px 64px}
 .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
 h1{font-size:22px;margin:0}h1 span{color:var(--accent)}h1 small{color:var(--mute);font-weight:400;font-size:13px;margin-left:8px}
@@ -28,7 +28,7 @@ h2{font-size:18px;margin:36px 0 12px}h2 .where{color:var(--mute);font-weight:400
 h3{margin:0;font-size:16px}
 .mute{color:var(--mute)}.small{font-size:13px}
 .tools{display:flex;gap:8px;flex-wrap:wrap}
-button.theme,a.theme{background:none;border:1px solid var(--line);color:var(--mute);border-radius:8px;padding:4px 10px;cursor:pointer;font:13px system-ui,sans-serif;text-decoration:none;line-height:normal}
+button.theme,a.theme{background:none;border:1px solid var(--line);color:var(--mute);border-radius:8px;padding:4px 10px;cursor:pointer;font:13px var(--font);text-decoration:none;line-height:normal}
 button.theme:hover,a.theme:hover{color:var(--ink);border-color:var(--mute)}
 .nextstep{background:color-mix(in srgb,var(--accent) 9%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:10px;padding:12px 14px;margin:14px 0}
 .nextstep .hint{color:var(--mute);font-size:13px;margin-top:4px}
@@ -46,9 +46,9 @@ button.theme:hover,a.theme:hover{color:var(--ink);border-color:var(--mute)}
 .chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--mute);white-space:nowrap}
 .chip.closed{color:var(--green);border-color:var(--green)}.chip.open{color:var(--ink);border-color:var(--ink)}
 .keys{font-size:13px;margin-top:4px}
-a{color:var(--accent)}code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--chip);padding:0 4px;border-radius:4px}
-.id{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mute)}
-pre{white-space:pre-wrap;word-break:break-word;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+a{color:var(--accent)}code{font:12.5px var(--font);background:var(--chip);padding:0 4px;border-radius:4px}
+.id{font:12px var(--font);color:var(--mute)}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;font:12.5px/1.45 var(--font)}
 details>summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}details>summary::-webkit-details-marker{display:none}details>summary::before{content:'▸';color:var(--mute);flex:none}details[open]>summary::before{content:'▾'}
 table{border-collapse:collapse;width:100%;font-size:13px}td,th{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
 button.key{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
@@ -65,10 +65,10 @@ box-shadow:-4px 0 24px rgba(0,0,0,.18);transform:translateX(105%);transition:tra
 #panel .desc{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
 #panel h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:16px 0 4px}
 .tabs{display:flex;align-items:baseline;gap:4px;margin:14px 0 4px;border-bottom:1px solid var(--line)}
-.tabs button{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:6px 12px 8px;color:var(--mute);font:14px system-ui,sans-serif;cursor:pointer}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:6px 12px 8px;color:var(--mute);font:14px var(--font);cursor:pointer}
 .tabs button:hover{color:var(--ink)}.tabs button[aria-selected=true]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
 .view[hidden]{display:none}
-.filter{width:100%;padding:9px 14px;border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--ink);font:14px system-ui,sans-serif;margin:4px 0 10px}
+.filter{width:100%;padding:9px 14px;border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--ink);font:14px var(--font);margin:4px 0 10px}
 .agroup{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:10px 0}
 .agroup>summary{font-size:15px}.agroup .count{margin-left:6px}
 .arow{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
@@ -81,7 +81,7 @@ h3.sh{font-size:15px;margin:28px 0 8px}
 .legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
 .chart{width:100%;min-width:540px;height:auto;display:block}
 .chart .grid{stroke:var(--line);stroke-width:1}.chart .base{stroke:var(--mute);stroke-width:1}
-.chart text{fill:var(--mute);font:11.5px system-ui,sans-serif}.chart .ytick{text-anchor:end}.chart .xtick{text-anchor:middle}
+.chart text{fill:var(--mute);font:11.5px var(--font)}.chart .ytick{text-anchor:end}.chart .xtick{text-anchor:middle}
 .chart .hit{fill:transparent;cursor:default;outline:none}.chart .hit:hover,.chart .hit:focus{fill:color-mix(in srgb,var(--ink) 5%,transparent)}
 .s1{fill:var(--s1);background:var(--s1)}.s2{fill:var(--s2);background:var(--s2)}.s3{fill:var(--s3);background:var(--s3)}
 .tableview{margin:6px 0}.tableview>summary{font-size:13px;color:var(--accent)}
@@ -92,11 +92,14 @@ table.narrow{width:auto;min-width:280px}tr.total td{border-top:2px solid var(--l
 .prog i{display:block;height:100%;background:var(--accent);border-radius:3px}
 #tip{position:fixed;z-index:20;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.14)}
 #tip[hidden]{display:none}
+button.ask{background:none;border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:3px 10px;margin:8px 0 0;cursor:pointer;font:12px var(--font)}
+button.ask:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 @media (min-width:1100px){body.panel-open{padding-right:400px}body.panel-open #panel{box-shadow:none}}
 @media (prefers-reduced-motion:reduce){#panel,body{transition:none}}
 """
 
 E = html.escape
+CHAT = "<!--hearthwood-chat-->"
 
 JS = r"""
 (function(){
@@ -148,9 +151,19 @@ function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board
     P.appendChild(el('h3',null,'Description'));P.appendChild(linked(b,(c.body||'').trim()||'(empty)'))}
   if(/^https?:\/\//.test(c.url||'')){var a=el('a',null,/^https:\/\/github\.com\//.test(c.url)?'Open on GitHub':'Open in the tracker');
     a.href=c.url;a.rel='noopener';var pp=el('p','small');pp.appendChild(a);P.appendChild(pp)}
+  if(document.getElementById('chat')){var ask=el('button','ask','ask the spirit about this card');ask.type='button';
+    ask.dataset.ask='card';ask.dataset.board=b;ask.dataset.key=k;P.appendChild(ask)}
   P.classList.add('open');document.body.classList.add('panel-open');P.setAttribute('aria-hidden','false');P.scrollTop=0;x.focus()}
 function close(){if(!P.classList.contains('open'))return;P.classList.remove('open');document.body.classList.remove('panel-open');P.setAttribute('aria-hidden','true');
   if(location.hash.indexOf('#card=')===0)location.hash='';if(last&&document.contains(last))last.focus();last=null}
+window.hwLink=function(node){var w=document.createTreeWalker(node,NodeFilter.SHOW_TEXT),list=[],tn;
+  while((tn=w.nextNode()))if(!tn.parentNode.closest('code,pre,button'))list.push(tn);
+  list.forEach(function(tn){var text=tn.nodeValue,re=/#\d+|[A-Z][A-Z0-9_]*-\d+/g,m,at=0,frag=null;
+    while((m=re.exec(text))){var before=m.index?text.charAt(m.index-1):'',after=text.charAt(m.index+m[0].length);
+      if(/[\w#-]/.test(before)||/[\w-]/.test(after))continue;var bd=boards.filter(function(x){return card(x,m[0])})[0];if(!bd)continue;
+      frag=frag||document.createDocumentFragment();if(m.index>at)frag.appendChild(txt(text.slice(at,m.index)));
+      var kb=el('button','key',m[0]);kb.type='button';kb.dataset.key=m[0];kb.dataset.board=bd;frag.appendChild(kb);at=m.index+m[0].length}
+    if(frag){if(at<text.length)frag.appendChild(txt(text.slice(at)));tn.parentNode.replaceChild(frag,tn)}})};
 var TABS=['active','all','stats'];
 function setTab(t){if(TABS.indexOf(t)<0)t='active';document.querySelectorAll('.view').forEach(function(v){v.hidden=v.dataset.view!==t});
   document.querySelectorAll('[role=tab]').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.tab===t))});
@@ -195,7 +208,7 @@ document.addEventListener('focusout',function(){TIP.hidden=true});addEventListen
 var first=location.hash.slice(1);var saved=null;try{saved=localStorage.getItem('hearthwood-tab')}catch(e){}
 if(first.indexOf('tab=')!==0&&saved)setTab(saved);
 document.addEventListener('click',function(e){var t=e.target.closest?e.target.closest('button.key'):null;
-  if(t){e.preventDefault();var sec=P.contains(t)?P:t.closest('[data-board]');var b=sec?sec.dataset.board:boards[0];
+  if(t){e.preventDefault();var sec=P.contains(t)?P:t.closest('[data-board]');var b=t.dataset.board||(sec?sec.dataset.board:boards[0]);
     if(!P.contains(t))last=t;var h='#'+hashOf(b,t.dataset.key);if(location.hash===h)sync();else location.hash=h;return}
   if(P.classList.contains('open')&&!P.contains(e.target)&&!WIDE.matches)close()});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
@@ -489,6 +502,15 @@ def stats_section(b):
 
 
 def build(h=None):
+    """Write ~/.hearthwood/log.html."""
+    h = h or home.home_dir()
+    out = h / "log.html"
+    out.write_text(render(h), encoding="utf-8")
+    return out
+
+
+def render(h=None, ui=False):
+    """The page as text. ui=True is `manager ui`'s page: the spirit's column goes where CHAT marks."""
     h = h or home.home_dir()
     cmd, why = guide.next_step(h)
     body = [f"<div class=top><h1>hearth<span>wood</span><small>version {E(__version__)} · built {E(home.now_iso())}</small></h1>"
@@ -499,7 +521,8 @@ def build(h=None):
             "<button type=button role=tab data-tab=all aria-selected=false>All</button>"
             "<button type=button role=tab data-tab=stats aria-selected=false>Stats</button></nav>",
             "<div class=view data-view=active>",
-            f"<div class=nextstep><span class=nlabel>next</span><code>{E(cmd)}</code><div class=hint>{E(why)}</div></div>"]
+            f"<div class=nextstep><span class=nlabel>next</span><code>{E(cmd)}</code><div class=hint>{E(why)}</div>"
+            + ("<button type=button class=ask data-ask=next>do it with the spirit</button>" if ui else "") + "</div>"]
     views_all, views_stats = [], []
     bs = home.boards(h)
     if not bs:
@@ -521,14 +544,12 @@ def build(h=None):
                        f"<td>{E(str(r.get('error') or ''))}</td></tr>" for r in reversed(runs))
         total = sum(r.get("cost_usd") or 0 for r in home.read_jsonl(h / "runs.jsonl"))
         body.append(f"<h2 id=calls>Model calls <span class='mute small'>all time ${total:.2f}, API-equivalent</span></h2>"
-                    f"<table><tr><th>when</th><th>board</th><th>call</th><th>model</th><th>time</th><th>cost</th><th></th></tr>{rows}</table>")
+                    f"<div class=scroll><table><tr><th>when</th><th>board</th><th>call</th><th>model</th><th>time</th><th>cost</th><th></th></tr>{rows}</table></div>")
     body.append("</div>")
     body += ["<div class=view data-view=all hidden>"] + (views_all or ["<p class=mute>No board yet.</p>"]) + ["</div>"]
     body += ["<div class=view data-view=stats hidden>"] + (views_stats or ["<p class=mute>No board yet.</p>"]) + ["</div>"]
     page = ("<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
             f"<title>hearthwood</title><style>{CSS}</style></head><body><main>" + "\n".join(body) + "</main>"
             "<aside id=panel role=dialog aria-modal=false aria-labelledby=panel-title aria-hidden=true></aside><div id=tip role=tooltip hidden></div>"
-            f"<script>{JS}</script></body></html>")
-    out = h / "log.html"
-    out.write_text(page, encoding="utf-8")
-    return out
+            + (CHAT if ui else "") + f"<script>{JS}</script></body></html>")
+    return page.replace("<body>", "<body class=ui>", 1) if ui else page

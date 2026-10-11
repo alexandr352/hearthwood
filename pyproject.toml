@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hearthwood"
-version = "0.5.0"
+version = "0.6.0"
 description = "Read a project board, see what needs attention, and teach it how you judge. A companion for project managers, built on Claude Code."
 readme = "README.md"
 license = "MIT"

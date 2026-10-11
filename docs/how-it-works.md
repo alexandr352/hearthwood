@@ -210,6 +210,23 @@ The page has three tabs; the one you last chose comes back, and `log.html#tab=st
   first label matching `[stats] type_labels`; a *goal* is a card with sub-items, or one labelled
   with `[stats] goal_labels`, so a goal with nothing under it yet still counts.
 
+### The spirit on the page
+
+`manager ui` serves the same page with the spirit's chat in the column on the right, on this machine
+only. Ask about the board, a card or a finding; the spirit reads the home and runs `manager`
+commands, and each command it runs shows as a line in the chat. Card numbers in its answers open the
+card. Opening a card covers the chat; "ask the spirit about this card" closes the card and asks with
+the card named, and NEXT's "do it with the spirit" asks about the next step. The conversation is one
+ongoing session, kept when you reload; "new" starts another. Each answer is a model call, listed
+under Model calls with its cost. When the board changes (a read, an analysis, a verdict), the page
+reloads itself unless you are typing.
+
+The server listens on 127.0.0.1 only and prints a link with a key made at each start: see
+[SECURITY](../SECURITY.md).
+
+The page is set in a monospace face: Adwaita Mono where it is installed, else the system's own
+monospace (SF Mono on a Mac, Menlo, Consolas).
+
 ## The fence
 
 Every tool call of a hearthwood session passes `src/hearthwood/fence.py`, a Claude Code

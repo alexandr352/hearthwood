@@ -43,6 +43,18 @@ def envelope(result, is_error=False, code=0):
     sys.exit(code)
 
 
+if "--include-partial-messages" in argv:
+    # the spirit on the page: a streamed answer with one command run on the way
+    print(json.dumps({"type": "system", "subtype": "init", "session_id": sid}))
+    print(json.dumps({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": "Bash", "input": {"command": "manager next"}}]}}))
+    for part in ("Look at ", "LAN-3 first", ": it gates LAN-4."):
+        print(json.dumps({"type": "stream_event", "event": {"type": "content_block_delta",
+                                                          "delta": {"type": "text_delta", "text": part}}}))
+    print(json.dumps({"type": "result", "result": "Look at LAN-3 first: it gates LAN-4.", "is_error": False,
+                      "session_id": sid, "total_cost_usd": totals[sid]}))
+    sys.exit(0)
+
 if flag("fail"):
     print("boom", file=sys.stderr)
     sys.exit(1)

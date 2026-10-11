@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0 — 2026-10-11
+
+- **The spirit on the page.** `manager ui` serves the page with the spirit's chat in the right
+  column, on 127.0.0.1 only, behind a key made at each start (a same-site HttpOnly cookie, a header
+  on every API call, a host check, a content security policy). Answers stream in; each command the
+  spirit runs shows as a line; card numbers in its answers open the card; a card's panel and NEXT
+  can ask the spirit about themselves. The conversation survives a reload; "new" starts afresh.
+  Each answer is listed under Model calls with its cost.
+- **Monospace.** The page is set in Adwaita Mono, else the system's own monospace.
+- The Model calls table scrolls inside its box on a narrow screen.
+
 ## 0.5.0 — 2026-10-11
 
 - **Three tabs on the page: Active, All, Stats.** The last one chosen comes back; `#tab=<name>`

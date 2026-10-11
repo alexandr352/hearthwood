@@ -14,6 +14,11 @@ Both deserve care.
   The reading reads its analysis folder and nothing else. The spirit reads the home (never
   `credentials/`), writes its own memory, and runs one `manager` command at a time. The fence is
   a guard rail, not a sandbox. See [How it works](docs/how-it-works.md#the-fence).
+- **The page's chat stays on your machine.** `manager ui` listens on 127.0.0.1 only. Each start
+  makes a random key; the printed link sets it as an HttpOnly, same-site cookie, and every API
+  call must also carry it in a header, which a page on another site cannot send. A request for
+  another host name is refused, and the page is served with a content security policy that loads
+  nothing from anywhere else. The chat is the same fenced spirit as `manager chat`.
 - **Sessions carry only their own instructions.** Your global Claude Code instructions and any
   `CLAUDE.md` above the home are excluded from hearthwood's sessions.
 

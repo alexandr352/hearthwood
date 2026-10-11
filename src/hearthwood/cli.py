@@ -398,6 +398,11 @@ def cmd_chat(args):
         return fail(f"the Claude Code CLI was not found: {cfg['claude']['bin']}")
 
 
+def cmd_ui(args):
+    from . import server
+    return server.serve(port=args.port, open_browser=not args.no_open)
+
+
 def cmd_doctor(args):
     h = home.home_dir()
     ok = True
@@ -494,6 +499,9 @@ def parser():
     cmd("share", cmd_share, "prepare your criteria and reasons to send, with item numbers and titles taken out", board=False)
     lg = cmd("log", cmd_log, "rebuild the page (~/.hearthwood/log.html)", board=False)
     lg.add_argument("--open", action="store_true", help="open it in the browser")
+    u = cmd("ui", cmd_ui, "serve the page with the spirit's chat, on this machine only", board=False)
+    u.add_argument("--port", type=int, default=0, help="a fixed port (default: a free one)")
+    u.add_argument("--no-open", action="store_true", help="print the link, do not open a browser")
     ch = cmd("chat", cmd_chat, "talk with the spirit about your board", board=False)
     ch.add_argument("--model")
     ch.add_argument("--resume", action="store_true", help="continue the last conversation")

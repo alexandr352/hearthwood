@@ -13,7 +13,7 @@ approve or reject it, and it remembers which.
                                         └──── criteria.md ◄─────┴── verdicts ◄──┘
 ```
 
-![The page after one reading of the demo board: the next step on top, the board's numbers, and the points that need attention with their badges, one already agreed with. On the right, card LAN-3 is open in its panel: parent, dependency, the card it blocks, its pull request, the cards it reads most like and its description, where LAN-2 is a link](docs/screenshot.png)
+![The page served by manager ui after one reading of the demo board: the next step, the board's numbers and the points that need attention on the left; on the right, the spirit's chat, with the commands it ran and its answer, whose card numbers are links](docs/screenshot.png)
 
 It is the sister of [hearthwork](https://github.com/alexandr352/hearthwork), which runs
 development tickets. Hearthwood looks after the board those tickets live on.
@@ -42,7 +42,9 @@ development tickets. Hearthwood looks after the board those tickets live on.
 - **Shows it all on one page.** `~/.hearthwood/log.html` is a static page with no server, in three
   tabs: Active (what needs you), All (every card, with a filter) and Stats (the board's numbers,
   counted without a model). Click any card number to read the card in a side panel.
-- **Has a spirit to talk to.** `manager chat` opens a Claude Code session that knows the home
+- **Has a spirit to talk to,** on the page with `manager ui` (a chat beside the board, served on
+  this machine only; card numbers in its answers open the card), or in the terminal with
+  `manager chat`. Either way it is a Claude Code session that knows the home
   and walks through an analysis with you.
 
 ## What it does not do

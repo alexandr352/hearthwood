@@ -49,7 +49,8 @@ everything it reads goes to Anthropic under your Claude account, as in any Claud
 Whether your organization allows ticket text to go to Claude is your organization's decision.
 `manager analyze --facts-only` sends nothing.
 
-**The spirit.** `manager chat` is a Claude Code session too, and so are the files it reads.
+**The spirit.** `manager chat`, and the chat of `manager ui`, are Claude Code sessions too, and so
+are the files they read. `manager ui` serves the page and the chat on your own machine only.
 
 **Reading the tracker.** `manager read` talks to GitHub (or later Jira) with your token. It only
 reads.

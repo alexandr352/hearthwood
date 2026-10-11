@@ -42,6 +42,7 @@ one. Commands about an analysis use the latest one unless you name another with
 | command | what it does |
 | --- | --- |
 | `manager log [--open]` | Rebuilds `~/.hearthwood/log.html` (which also happens after every read, analysis and verdict). `--open` opens it in the browser. |
+| `manager ui [--port N] [--no-open]` | Serves the page with the spirit's chat beside it, on this machine only, and prints a link that carries a key. The chat is the same spirit as `manager chat`. Ctrl-C stops it; the static page keeps working without it. |
 | `manager chat [--resume] [--model M]` | Talks with the spirit in the home. It walks through an analysis with you and records your verdicts as you give them. It runs `manager` commands, one at a time, and shows each one. |
 | `manager next` | The one next step. |
 | `manager status` | Where each board stands: the last read, the last analysis, the proposals, your verdicts and criteria. |
