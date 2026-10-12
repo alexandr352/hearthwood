@@ -239,6 +239,13 @@ class Handler(BaseHTTPRequestHandler):
             if not self.authed(api=True):
                 return self.send(HTTPStatus.FORBIDDEN, "no")
             return self.send(HTTPStatus.OK, json.dumps({"stamp": stamp(self.h)}), "application/json")
+        if url.path == "/api/card":
+            if not self.authed(api=True):
+                return self.send(HTTPStatus.FORBIDDEN, "no")
+            c = worklog.full_card(self.h, (q.get("board") or [""])[0], (q.get("key") or [""])[0])
+            if c is None:
+                return self.send(HTTPStatus.NOT_FOUND, "no such card")
+            return self.send(HTTPStatus.OK, json.dumps(c, ensure_ascii=False), "application/json")
         if url.path == "/api/history":
             if not self.authed(api=True):
                 return self.send(HTTPStatus.FORBIDDEN, "no")
@@ -507,6 +514,8 @@ form.onsubmit=async function(e){e.preventDefault();var text=input.value.trim();i
         log.scrollTop=log.scrollHeight})}
     if(!got&&out.textContent==='…')out.remove();
   }catch(err){add('msg err',String(err))}finally{btn.disabled=false;busy=false;input.focus();check()}};
+window.hwCard=function(b,k){return fetch('/api/card?board='+encodeURIComponent(b)+'&key='+encodeURIComponent(k),
+  {headers:{'X-HW-Key':KEY}}).then(function(r){return r.ok?r.json():null}).catch(function(){return null})};
 fetch('/api/history',{headers:{'X-HW-Key':KEY}}).then(function(r){return r.json()}).then(function(items){
   items.forEach(function(m){if(m.kind==='me')add('msg me',m.text);else if(m.kind==='tool')add('tool',m.text);
     else if(m.kind==='meta')add('meta-line',m.text);else md(add('msg',''),m.text)});log.scrollTop=log.scrollHeight}).catch(function(){});

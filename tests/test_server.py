@@ -71,6 +71,33 @@ class Served(unittest.TestCase):
         status, _, body = self.call("GET", "/api/history", headers=self.api())
         self.assertEqual((status, json.loads(body)), (200, []))
 
+    def test_a_stub_card_is_served_whole(self):
+        _, _, page = self.call("GET", "/", headers=self.cookie())
+        import re
+        cards = json.loads(re.search(r'<script type=application/json class=cards data-board="demo">(.*?)</script>', page, re.S).group(1))
+        stub = next(k for k, c in cards.items() if c.get("stub"))
+        self.assertEqual(self.call("GET", f"/api/card?board=demo&key={stub}", headers=self.cookie())[0], 403)
+        self.assertEqual(self.call("GET", f"/api/card?board=demo&key={stub}", headers=self.api(), host="evil.example:80")[0], 403)
+        status, _, body = self.call("GET", f"/api/card?board=demo&key={stub}", headers=self.api())
+        self.assertEqual(status, 200)
+        c = json.loads(body)
+        self.assertEqual(c["key"], stub)
+        self.assertNotIn("stub", c)
+        self.assertIn("body", c)
+        self.assertIn("window.hwCard=", page)
+
+    def test_a_served_card_keeps_people_out(self):
+        status, _, body = self.call("GET", "/api/card?board=demo&key=LAN-7", headers=self.api())
+        self.assertEqual(status, 200)
+        talk = json.loads(body)["thread"]
+        self.assertNotIn("author", talk[1])
+        self.assertIn("@someone and I agreed", talk[1]["body"])
+
+    def test_an_unknown_card_or_board_is_not_found(self):
+        self.assertEqual(self.call("GET", "/api/card?board=demo&key=LAN-999", headers=self.api())[0], 404)
+        self.assertEqual(self.call("GET", "/api/card?board=nope&key=LAN-7", headers=self.api())[0], 404)
+        self.assertEqual(self.call("GET", "/api/card", headers=self.api())[0], 404)
+
     def test_an_oversized_message_is_refused(self):
         big = json.dumps({"message": "x" * (server.MAX_BODY + 1)})
         self.assertEqual(self.call("POST", "/api/chat", body=big, headers=self.api())[0], 413)

@@ -197,7 +197,10 @@ like one, stays text.
 
 The page carries the cards it mentions whole, and every other card on the board as its title,
 state and column, so any card number opens something. On a board of 728 cards it carried 131
-whole, with their 33 comments, and 597 as titles, and the page weighed 981 KB.
+whole, with their 33 comments, and 597 as titles, and the page weighed 981 KB. Under `manager ui`
+a card carried as its title is read whole when it is opened: the panel asks the server for it
+(`/api/card`, behind the same key as the chat), from the latest snapshot, with the same rules about
+people. The static page says where to read it instead.
 
 A card's text is shown, never run: the panel builds every line with plain text and no HTML, and
 the embedded cards are escaped so that no card can close the element that holds them. Assignees and
@@ -209,6 +212,9 @@ the board named in a description or a comment reads "someone".
 The page has three tabs; the one you last chose comes back, and `log.html#tab=stats` opens one directly.
 
 - **Active**: what is above. The next step, the reading, the questions, the proposals, the findings.
+  A filter narrows them as you type: a line stays when its own words match, or the number, title,
+  type or label of a card it names; the ready list keeps the cards that match; it says how many of
+  how many are shown.
 - **All**: every card on the board, grouped by column in the board's order, closed cards folded at
   the end. A filter narrows it by number, title, type or label as you type, and every row opens the
   card in the panel.

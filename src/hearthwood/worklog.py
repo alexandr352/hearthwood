@@ -77,7 +77,7 @@ box-shadow:-4px 0 24px rgba(0,0,0,.18);transform:translateX(105%);transition:tra
 .arow{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
 .agroup>summary+.arow{margin-top:8px}
 .arow .atitle{flex:1 1 260px;min-width:0}.arow .date{font-variant-numeric:tabular-nums}
-.arow[hidden],.agroup[hidden]{display:none}
+.arow[hidden],.agroup[hidden],.card[hidden],button.key[hidden],main h2[hidden]{display:none}
 .tiles.wide{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
 h3.sh{font-size:15px;margin:28px 0 8px}
 .legend{display:flex;gap:16px;font-size:13px;margin:4px 0 2px}.legend span{display:inline-flex;align-items:center;gap:6px}
@@ -138,11 +138,15 @@ function parse(){var h=location.hash.slice(1);if(h.indexOf('card=')!==0)return n
   if(boards.length>1&&i>0){b=decodeURIComponent(h.slice(0,i));k=decodeURIComponent(h.slice(i+1))}
   else{k=decodeURIComponent(h);b=boards.filter(function(x){return card(x,k)})[0]}
   return b&&card(b,k)?[b,k]:null}
-function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board=b;
+function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board=b;P.dataset.key=k;
   var hd=el('header');var h=el('h2',null,k+' '+(c.title||''));h.id='panel-title';hd.appendChild(h);
   var x=el('button','close','close');x.type='button';x.setAttribute('aria-label','Close');x.onclick=close;hd.appendChild(x);P.appendChild(hd);
   var chips=el('div','row');chips.appendChild(el('span','chip '+(c.state==='closed'?(c.close_reason==='completed'?'closed':''):'open'),state(c)));[c.column,c.kind].concat(c.labels||[]).forEach(function(v){if(v)chips.appendChild(el('span','chip',v))});P.appendChild(chips);
-  if(c.stub){P.appendChild(el('p','mute small','The page carries in full only the cards it mentions; this card\'s description is not on it.'))}
+  if(c.stub){if(window.hwCard&&!c.unread){P.appendChild(el('p','mute small','Reading the card…'));
+      window.hwCard(b,k).then(function(full){if(full){data[b][k]=full}else{c.unread=true}
+        if(P.dataset.board===b&&P.dataset.key===k&&P.classList.contains('open'))show(b,k)})}
+    else P.appendChild(el('p','mute small',c.unread?'This card could not be read from the latest snapshot.':
+      'This page carries in full only the cards it mentions. Open it with manager ui to read every card whole.'))}
   else{var dl=el('dl');
     row(dl,'parent',c.parent?key(b,c.parent):null);
     row(dl,'sub-items',c.children&&c.children.length?keys(b,c.children):null);
@@ -217,6 +221,22 @@ function allList(sec){var box=sec.querySelector('.allist'),b=sec.dataset.board,c
       g.querySelector('.count').textContent=q?shown+' of '+g.querySelectorAll('.arow').length:String(g.querySelectorAll('.arow').length);
       if(q&&shown)g.open=true})})}
 document.querySelectorAll('[data-view=all] section[data-board]').forEach(allList);
+(function(){var f=document.getElementById('activefilter'),cnt=document.getElementById('activecount');if(!f)return;
+  function about(b,k){var c=card(b,k);return ' '+k+(c?' '+(c.title||'')+' '+(c.type||'')+' '+(c.labels||[]).join(' '):'')}
+  function words(sec,n){var t='',w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT),x;
+    while((x=w.nextNode()))if(!x.parentNode.closest('.acts,.cmdhint'))t+=' '+x.nodeValue;
+    n.querySelectorAll('button.key').forEach(function(k){t+=about(k.dataset.board||sec.dataset.board,k.dataset.key)});return t.toLowerCase()}
+  f.addEventListener('input',function(){var q=f.value.trim().toLowerCase(),shown=0,all=0;
+    document.querySelectorAll('[data-view=active] section[data-board]').forEach(function(sec){var head=null,first=true,seen=false;
+      function close(){if(head)head.hidden=!!q&&!seen}
+      [].slice.call(sec.children).forEach(function(n){
+        if(n.tagName==='H2'){if(first){first=false;return}close();head=n;seen=false;return}
+        if(!n.classList.contains('card'))return;all++;var on;
+        if(n.classList.contains('readylist')){var any=false;n.querySelectorAll('button.key').forEach(function(k){
+            var hit=!q||about(sec.dataset.board,k.dataset.key).toLowerCase().indexOf(q)>=0;k.hidden=!hit;if(hit)any=true});on=any}
+        else on=!q||words(sec,n).indexOf(q)>=0;
+        n.hidden=!on;if(on){shown++;seen=true}});close()});
+    cnt.hidden=!q;cnt.textContent=shown+' of '+all+' shown'})})();
 var TIP=document.getElementById('tip');
 function tipAt(t,x,y){TIP.textContent=t.dataset.tip;TIP.hidden=false;var w=TIP.offsetWidth;
   TIP.style.left=Math.max(8,Math.min(innerWidth-w-8,x-w/2))+'px';TIP.style.top=Math.max(8,y-44)+'px'}
@@ -282,7 +302,7 @@ def _type(it, patterns):
     return it.get("kind") or ""
 
 
-def card_data(items, ref, similar, people, type_patterns=(), decided=None):
+def card_data(items, ref, similar, people, type_patterns=(), decided=None, stubs=True):
     """What the panel shows: the cards in `ref` whole, every other card on the board as a stub, so any card
     number the panel meets, in a field or in a description, opens something. With people off, a comment
     carries no author and anyone on the board named in a description or a comment reads "someone"."""
@@ -309,13 +329,38 @@ def card_data(items, ref, similar, people, type_patterns=(), decided=None):
                             **({"author": x.get("author") or ""} if people else {}))
                        for x in it.get("thread") or []]
         cards[k] = c
-    for k in sorted(set(items) - set(cards)):
+    for k in sorted(set(items) - set(cards)) if stubs else ():
         it = items[k]
         cards[k] = {"key": k, "title": it.get("title"), "state": it.get("state"), "column": it.get("column"),
                     "close_reason": it.get("close_reason"), "url": it.get("url"), "type": _type(it, type_patterns),
                     "labels": it.get("labels") or [], "parent": it.get("parent"), "updated": (it.get("updated") or "")[:10],
                     "stub": True}
     return cards
+
+
+_SNAP = {}
+
+
+def full_card(h, board, key):
+    """One card whole, in the panel's shape, from the board's latest snapshot: what `manager ui` hands the panel
+    when it opens a card the page carries only as a stub. None when there is no such board or card."""
+    b = next((x for x in home.boards(h) if x.name == board), None)
+    snap = b.latest_snapshot() if b else None
+    if not snap:
+        return None
+    stamp = (str(snap), snap.stat().st_mtime_ns)
+    if _SNAP.get("stamp") != stamp:
+        _SNAP.clear()
+        _SNAP.update(stamp=stamp, items={i["key"]: i for i in json.loads(snap.read_text(encoding="utf-8"))["items"]})
+    items = _SNAP["items"]
+    if key not in items:
+        return None
+    d = b.latest_analysis()
+    similar = {}
+    if d and (d / "facts.json").exists():
+        similar = json.loads((d / "facts.json").read_text(encoding="utf-8")).get("similar") or {}
+    return card_data(items, {key}, similar, bool(b.settings["rules"].get("people")),
+                     b.settings.get("stats", {}).get("type_labels", []), criteria.last_decided(h, b.name), stubs=False)[key]
 
 
 def embed(obj):
@@ -424,7 +469,7 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
         parts.append("<p class=mute>Facts only (no reading): <code>manager analyze</code> adds one.</p>")
     if facts["ready"]:
         parts.append(f"<h2>Ready to start <span class='mute small'>{len(facts['ready'])}</span></h2>"
-                     f"<div class=card>{_keys(facts['ready'], items, ref)}</div>")
+                     f"<div class='card readylist'>{_keys(facts['ready'], items, ref)}</div>")
     parts.append("<h2>Findings</h2>")
     for f in facts["findings"]:
         if f["rule"] == "ready":
@@ -594,6 +639,9 @@ def render(h=None, ui=False):
             + ("<button type=button class=ask data-ask=next>Discuss the next step with Spirit</button>" if ui else "") + "</div>"]
     views_all, views_stats = [], []
     bs = home.boards(h)
+    if bs:
+        body.append("<input class=filter id=activefilter type=search placeholder='Filter by number, title, type, label or words' "
+                    "aria-label='Filter what needs attention'><p class='mute small' id=activecount hidden></p>")
     if not bs:
         body.append("<p>No board yet. <code>manager connect github</code> or <code>manager connect markdown &lt;folder&gt;</code>.</p>")
     for b in bs:

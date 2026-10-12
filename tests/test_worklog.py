@@ -112,6 +112,17 @@ class Page(unittest.TestCase):
         self.assertEqual(talk[1]["author"], "sam")
         self.assertIn("@ana", talk[1]["body"])
 
+    def test_the_active_tab_has_a_filter(self):
+        page = self.build()
+        self.assertIn("<input class=filter id=activefilter", page)
+        self.assertIn("class='card readylist'", page)
+        self.assertIn("getElementById('activefilter')", page)
+
+    def test_the_static_page_says_where_a_stub_is_read_whole(self):
+        page = self.build()
+        self.assertIn("Open it with manager ui to read every card whole.", page)
+        self.assertIn("if(window.hwCard&&!c.unread)", page)
+
     def test_the_page_says_what_to_do_next(self):
         page = self.build()
         self.assertIn("<span class=nlabel>next</span><code>manager review -b demo</code>", page)

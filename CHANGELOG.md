@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.1 — 2026-10-12
+
+- **A filter on Active.** It narrows the points, questions, proposals, findings and the ready list as
+  you type: a line stays when its own words match, or the number, title, type or label of a card it
+  names. "N of M shown" says how much is left.
+- **Every card whole under `manager ui`.** The page carries whole only the cards Active mentions; the
+  rest, which the All tab lists, were titles alone, and their panel said so. Now the panel reads such a
+  card from the server when it is opened (`/api/card`, behind the chat's key and host check), with its
+  description, comments and new marks, and the same rules about people. The static `log.html` stays
+  small and says to open it with `manager ui` to read every card whole.
+
 ## 0.8.0 — 2026-10-12
 
 - **Comments are read.** The newest 20 comments of every issue, with when and by whom, and how

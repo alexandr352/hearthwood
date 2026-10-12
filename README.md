@@ -41,7 +41,7 @@ development tickets. Hearthwood looks after the board those tickets live on.
   line, on the page with a click or by discussing it with the spirit, or with `manager review`. A reason you would apply again becomes a rule in `criteria.md`, in your words, and it
   outranks the reading's defaults from then on.
 - **Shows it all on one page.** `~/.hearthwood/log.html` is a static page with no server, in three
-  tabs: Active (what needs you), All (every card, with a filter) and Stats (the board's numbers,
+  tabs: Active (what needs you, with a filter), All (every card, with a filter) and Stats (the board's numbers,
   counted without a model). Click any card number to read the card in a side panel.
 - **Has a spirit to talk to,** on the page with `manager ui` (a chat beside the board, served on
   this machine only; card numbers in its answers open the card), or in the terminal with
