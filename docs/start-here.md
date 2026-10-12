@@ -234,7 +234,10 @@ work, that is useful to know: tell whoever set hearthwood up.
 ## For whoever sets it up for a team
 
 Hearthwood signs in to Jira as a registered Atlassian app. One app serves the whole team; each
-person still signs in as themselves and sees only what they may see. Before you send this guide:
+person still signs in as themselves and sees only what they may see. Should hearthwood one day need
+more permissions (writing a comment it suggested, say), you add them to the same app; nobody else
+changes anything, and each person simply allows it once more the next time they sign in. Before
+you send this guide:
 
 1. **Register the app** once, as [Connecting](connecting.md#jira-cloud) describes. It needs an
    Atlassian account, not an administrator. Its **Settings** page holds the **Client ID** (the
