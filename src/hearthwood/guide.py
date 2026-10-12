@@ -2,7 +2,7 @@
 
 import json
 
-from . import credentials, criteria, home, reading
+from . import credentials, criteria, home, jira_auth, reading
 
 
 def next_step(h=None):
@@ -11,11 +11,13 @@ def next_step(h=None):
         return "manager init", "set up the home"
     bs = home.boards(h)
     if not bs:
-        return "manager connect github --board <name> --repo <owner/repo>", "connect a board (or `manager connect markdown <folder>`)"
+        return "manager connect github --board <name> --repo <owner/repo>", "connect a board (or `manager connect jira`, or `manager connect markdown <folder>`)"
     for b in bs:
         if b.source == "github" and b.settings.get("token", "credentials") == "credentials" \
                 and not credentials.token_path(b).exists():
             return f"manager connect token --board {b.name}", f"board {b.name} has no token"
+        if b.source == "jira" and not jira_auth.grant_path(b).exists():
+            return f"manager connect jira --board {b.name} --again", f"board {b.name} has no Jira sign-in"
         if not b.latest_snapshot():
             return f"manager read -b {b.name}", f"board {b.name} has not been read"
         d = b.latest_analysis()

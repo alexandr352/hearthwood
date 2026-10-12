@@ -157,6 +157,7 @@ function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board
       var t=(p.number?'#'+p.number+' ':'')+p.state+(p.draft?' (draft)':'');
       if(/^https?:\/\//.test(p.url||'')){var a=el('a',null,t);a.href=p.url;a.rel='noopener';ps.appendChild(a)}else ps.appendChild(txt(t))});row(dl,'pull requests',ps)}
     if(c.assignees)row(dl,'assignees',c.assignees.join(', ')||'-');
+    row(dl,'sprint',c.sprint||null);row(dl,'priority',c.priority||null);
     row(dl,'milestone',c.milestone||null);
     row(dl,'created',day(c.created));row(dl,'updated',day(c.updated));row(dl,'closed',day(c.closed)||null);
     row(dl,'comments',c.comments?String(c.comments):null);
@@ -207,10 +208,11 @@ function allList(sec){var box=sec.querySelector('.allist'),b=sec.dataset.board,c
   function group(name,list,folded){if(!list.length)return;list.sort(function(a,c){return num(a.key)-num(c.key)});
     var d=el('details','agroup');d.open=!folded;var s=el('summary');s.appendChild(el('b',null,name));var n=el('span','mute small count',String(list.length));
     s.appendChild(n);d.appendChild(s);
-    list.forEach(function(c){var r=el('div','arow');r.dataset.text=(c.key+' '+(c.title||'')+' '+(c.type||'')+' '+(c.labels||[]).join(' ')).toLowerCase();
+    list.forEach(function(c){var r=el('div','arow');r.dataset.text=(c.key+' '+(c.title||'')+' '+(c.type||'')+' '+(c.labels||[]).join(' ')+' '+(c.sprint||'')).toLowerCase();
       r.appendChild(key(b,c.key));r.appendChild(el('span','atitle',c.title||''));
       if(c.type)r.appendChild(el('span','chip',c.type));
       (c.labels||[]).filter(function(l){return l!==c.type}).slice(0,3).forEach(function(l){r.appendChild(el('span','chip',l))});
+      if(c.sprint)r.appendChild(el('span','chip sprint',c.sprint));
       if(c.parent){var u=el('span','mute small');u.appendChild(txt('under '));u.appendChild(key(b,c.parent));r.appendChild(u)}
       if(c.updated)r.appendChild(el('span','mute small date',String(c.updated).slice(0,10)));d.appendChild(r)});
     box.appendChild(d)}
@@ -314,7 +316,9 @@ def card_data(items, ref, similar, people, type_patterns=(), decided=None, stubs
     for k in sorted(ref):
         it = items[k]
         c = {f: it.get(f) for f in CARD_FIELDS}
-        c["depends_in_text"] = (it.get("fields") or {}).get("depends_in_text", [])
+        fx = it.get("fields") or {}
+        c["depends_in_text"] = fx.get("depends_in_text", [])
+        c["sprint"], c["priority"] = fx.get("sprint") or "", fx.get("priority") or ""
         c["prs"] = [{"number": p.get("number"), "state": p.get("state"), "draft": p.get("draft"),
                      "url": p.get("url") or ""} for p in it.get("prs") or []]
         c["similar"] = similar.get(k, [])
@@ -334,7 +338,7 @@ def card_data(items, ref, similar, people, type_patterns=(), decided=None, stubs
         cards[k] = {"key": k, "title": it.get("title"), "state": it.get("state"), "column": it.get("column"),
                     "close_reason": it.get("close_reason"), "url": it.get("url"), "type": _type(it, type_patterns),
                     "labels": it.get("labels") or [], "parent": it.get("parent"), "updated": (it.get("updated") or "")[:10],
-                    "stub": True}
+                    "sprint": (it.get("fields") or {}).get("sprint") or "", "stub": True}
     return cards
 
 
@@ -503,7 +507,7 @@ def all_section(b):
         c = i.get("column") or "(no column)"
         if i.get("state") == "open" and c not in cols:
             cols.append(c)
-    return [head, f"<input class=filter type=search placeholder='Filter by number, title, type or label' "
+    return [head, f"<input class=filter type=search placeholder='Filter by number, title, type, label or sprint' "
                   f"aria-label='Filter the cards of {E(b.name)}'>",
             f"<div class=allist data-columns=\"{E(json.dumps(cols))}\"><p class=mute>The list needs JavaScript.</p></div>"]
 

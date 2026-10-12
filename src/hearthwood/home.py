@@ -5,7 +5,7 @@
       criteria.md              YOUR criteria: how you judge a board. Every reading reads it.
       verdicts.jsonl           every agree / disagree you gave a finding, with your reason
       runs.jsonl               every model call: what it was for, seconds, cost
-      credentials/             tokens, one file per board, readable by you alone
+      credentials/             tokens and Jira sign-ins, one file per board, readable by you alone
       boards/<name>/
         board.toml             where the board is and how its columns are used
         snapshots/<stamp>.json what `manager read` took from the tracker
@@ -60,9 +60,9 @@ where = "{where}"
 # How your columns are used. Names are matched exactly, as the board spells them.
 # A board with no columns at all (issues only) is judged by open and closed.
 [columns]
-startable = ["Todo", "To Do", "Ready"]       # where work waits to be picked up
+startable = ["Todo", "To Do", "Ready", "Selected for Development"]   # where work waits to be picked up
 active = ["In Progress", "Doing"]            # where work is being done
-review = ["In Review", "Review"]             # done but not yet accepted or merged
+review = ["In Review", "Review", "Code Review"]   # done but not yet accepted or merged
 done = ["Done", "Closed"]                     # finished
 parked = ["Backlog", "Icebox"]               # deliberately not now
 

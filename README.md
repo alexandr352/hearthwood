@@ -20,10 +20,11 @@ development tickets. Hearthwood looks after the board those tickets live on.
 
 ## What it does
 
-- **Reads a board.** It reads GitHub issues and a GitHub Projects board. It also reads a folder
-  of markdown files, one ticket per file with a few header lines
-  ([format](docs/connecting.md#a-folder-of-markdown-files)); the demo board is one. Jira is
-  next. Everything is kept as a snapshot on your machine, so an analysis can always be looked
+- **Reads a board.** It reads GitHub issues and a GitHub Projects board, and a Jira Cloud project
+  and its board through your own sign-in in the browser
+  ([Jira](docs/connecting.md#jira-cloud)). It also reads a folder of markdown files, one ticket
+  per file with a few header lines ([format](docs/connecting.md#a-folder-of-markdown-files)); the
+  demo board is one. Everything is kept as a snapshot on your machine, so an analysis can always be looked
   at again and argued with.
 - **Works out the facts with plain code first.** What is ready to start, with every dependency
   finished. What is blocked, and by what. What has not moved in a week. Where the board and the
@@ -152,8 +153,8 @@ your usage limits, not out of money. Every call is listed on the page.
 - [Commands](docs/commands.md): every command and its options.
 - [How it works](docs/how-it-works.md): the snapshot, every rule, the reading and its contract,
   the page and its tabs, the spirit on the page, deciding there, and the fence.
-- [Connecting](docs/connecting.md): GitHub tokens and permissions, the markdown format, and Jira
-  (planned).
+- [Connecting](docs/connecting.md): GitHub tokens and permissions, Jira's sign-in and its app, and
+  the markdown format.
 - [Criteria](docs/criteria.md): how verdicts become rules, and how to share what you have taught it.
 - [Finding duplicates](docs/experiments/duplicate-search.md): an experiment on a real board, full-text
   search against embeddings, and what hearthwood does with the result.

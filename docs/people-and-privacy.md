@@ -54,7 +54,7 @@ Whether your organization allows ticket text to go to Claude is your organizatio
 **The spirit.** `manager chat`, and the chat of `manager ui`, are Claude Code sessions too, and so
 are the files they read. `manager ui` serves the page and the chat on your own machine only.
 
-**Reading the tracker.** `manager read` talks to GitHub (or later Jira) with your token. It only
+**Reading the tracker.** `manager read` talks to GitHub with your token, or to Jira with your own sign-in. It only
 reads.
 
 ## Sharing what you have taught it

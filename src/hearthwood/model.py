@@ -33,7 +33,7 @@ class Item:
     url: str = ""
     kind: str = ""          # the tracker's type: Task, Bug, Feature, Epic ...
     column: str | None = None
-    column_source: str = "" # board (read from the board) | history (the last status change) | file | none
+    column_source: str = "" # board (read from the board) | history (the last status change) | status | file | none
     labels: list = field(default_factory=list)
     assignees: list = field(default_factory=list)
     parent: str | None = None
@@ -56,12 +56,13 @@ class Item:
 @dataclass
 class Board:
     name: str
-    source: str             # github | markdown
+    source: str             # github | jira | markdown
     where: str              # owner/repo, a project URL, or a folder
     fetched_at: str
     columns: list = field(default_factory=list)      # in board order, as far as it is known
     items: list = field(default_factory=list)        # Item
     notes: list = field(default_factory=list)        # what could not be read, and why
+    prs_read: bool = True   # False when the tracker's pull requests cannot be read (Jira): their rules stand down
 
     def by_key(self):
         return {i.key: i for i in self.items}
@@ -78,4 +79,5 @@ class Board:
             raw["thread"] = [Comment(**c) for c in raw.get("thread", [])]
             items.append(Item(**raw))
         return cls(name=d["name"], source=d["source"], where=d.get("where", ""), fetched_at=d["fetched_at"],
-                   columns=list(d.get("columns", [])), items=items, notes=list(d.get("notes", [])))
+                   columns=list(d.get("columns", [])), items=items, notes=list(d.get("notes", [])),
+                   prs_read=d.get("prs_read", True))

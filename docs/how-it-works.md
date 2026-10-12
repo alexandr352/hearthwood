@@ -11,7 +11,7 @@ for everyone; the reading is yours.
 
 ## 1. The snapshot
 
-An adapter reads the tracker and returns one shape for every tracker: items with a key, title,
+An adapter (GitHub, Jira Cloud, or a folder of markdown files) reads the tracker and returns one shape for every tracker: items with a key, title,
 state, column, labels, parent and sub-items, "blocked by" links, linked pull requests, dates,
 description, comments and column history. It is stored as
 `~/.hearthwood/boards/<board>/snapshots/<stamp>.json`.

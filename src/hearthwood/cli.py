@@ -8,8 +8,10 @@ import sqlite3
 import subprocess
 import sys
 import textwrap
+from urllib.parse import urlparse
 
-from . import __version__, criteria, credentials, facts, guide, home, reading, search, snapshot, spirit, worklog
+from . import __version__, criteria, credentials, facts, guide, home, jira_auth, reading, search, snapshot, spirit, worklog
+from .adapters import jira
 
 
 def out(msg=""):
@@ -93,6 +95,99 @@ def cmd_connect_token(args):
     b = board_of(args)
     n = credentials.save_token(b, credentials.ask_token(stdin=args.token_stdin))
     out(f"token saved for board {b.name} ({n} characters), readable by you alone")
+    return 0
+
+
+def cmd_connect_jira_app(args):
+    h, _ = home.init_home()
+    if args.secret_stdin or not sys.stdin.isatty():
+        secret = sys.stdin.readline().strip()
+    else:
+        import getpass
+        secret = getpass.getpass("Paste the app's client secret (it will not be shown): ").strip()
+    jira_auth.save_app(h, args.client_id, secret)
+    out(f"Jira app saved in {jira_auth.app_path(h)}, readable by you alone")
+    out("\nnext: manager connect jira --board <name>")
+    return 0
+
+
+def _choose(what, options, given, label, names, flag):
+    """One of `options`: the one `given` names, the only one, or one the person picks from a list. Never a guess."""
+    if given:
+        hit = [o for o in options if given.lower() in [n.lower() for n in names(o) if n]]
+        if len(hit) == 1:
+            return hit[0]
+        raise ValueError(f"no {what} {given!r} here; there are: " + ", ".join(label(o) for o in options))
+    if len(options) == 1:
+        return options[0]
+    if not options:
+        raise ValueError(f"no {what} can be read with this sign-in")
+    if not sys.stdin.isatty():
+        raise ValueError(f"more than one {what}; choose with {flag}: " + ", ".join(label(o) for o in options))
+    for n, o in enumerate(options, 1):
+        out(f"  {n}. {label(o)}")
+    pick = input(f"Which {what}? ").strip()
+    if pick.isdigit() and 1 <= int(pick) <= len(options):
+        return options[int(pick) - 1]
+    return _choose(what, options, pick, label, names, flag)
+
+
+def cmd_connect_jira(args):
+    h, _ = home.init_home()
+    app = jira_auth.load_app(h)
+    existing = next((x for x in home.boards(h) if x.name == args.board), None)
+    if existing and not args.again:
+        return fail(f"board {args.board} already exists; `--again` signs it in again")
+    if args.again and (not existing or existing.source != "jira"):
+        return fail(f"no Jira board named {args.board} to sign in again")
+    verifier, challenge = jira_auth.new_pkce()
+    state = jira_auth.new_state()
+    out("Open this link, choose your site and allow hearthwood to read it:\n")
+    out("  " + jira_auth.authorize_url(app["client_id"], state, challenge) + "\n")
+    if args.paste:
+        out("After you allow it, the browser lands on an address starting with http://localhost:8768/callback (the page "
+            "itself may not open). Copy that whole address.")
+        code = jira_auth.code_from(input("Paste it here: "), state)
+    else:
+        out(f"Waiting for the browser on 127.0.0.1:{jira_auth.PORT} (5 minutes). If the browser runs on another "
+            f"machine, forward the port first (ssh -L {jira_auth.PORT}:127.0.0.1:{jira_auth.PORT} <this machine>), or "
+            "run this again with --paste.")
+        code = jira_auth.wait_for_code(state)
+    grant = jira_auth.exchange(app, code, verifier)
+    sites = jira_auth.resources(grant["access_token"])
+    want = args.site or (existing.settings.get("cloud_id") if existing else "")
+    site = _choose("site", sites, want, lambda s: s.get("url", ""),
+                   lambda s: [s.get("url", ""), s.get("name", ""), s.get("id", ""), urlparse(s.get("url", "")).netloc], "--site")
+    grant.update(cloud_id=site["id"], site_url=site["url"])
+    if existing:
+        if existing.settings.get("cloud_id") != site["id"]:
+            return fail(f"board {existing.name} reads {existing.settings.get('site')}; this sign-in chose {site['url']}")
+        jira_auth.save_grant(existing, grant)
+        out(f"board {existing.name}: signed in again to {site['url']}")
+        return 0
+    client = jira.Jira(site["id"], lambda: f"Bearer {grant['access_token']}")
+    if args.project:
+        project = args.project
+    else:
+        found = client.get("/rest/api/3/project/search", {"maxResults": 100, "orderBy": "key"}).get("values") or []
+        project = _choose("project", found, "", lambda p: f"{p.get('key')} ({p.get('name')})",
+                          lambda p: [p.get("key", ""), p.get("name", "")], "--project")["key"]
+    board_id = int(args.board_id or 0)
+    if not board_id:
+        boards = jira.find_board(client, project)
+        if boards:
+            board_id = boards[0][0]
+            if len(boards) > 1:
+                out(f"  project {project} has {len(boards)} boards; using \"{boards[0][1]}\" (#{board_id}). "
+                    "Others: " + ", ".join(f"#{i} {n}" for i, n, _ in boards[1:]) + " (set board_id in board.toml)")
+    extra = (f"site = {json.dumps(site['url'])}\ncloud_id = {json.dumps(site['id'])}\nproject = {json.dumps(project)}\n"
+             f"board_id = {board_id}                 # the board whose columns and order are read; 0 = none\n")
+    b = home.add_board(args.board, "jira", f"{site['url']} {project}", extra=extra)
+    jira_auth.save_grant(b, grant)
+    out(f"board {b.name}: Jira {site['url']}, project {project}" + (f", board #{board_id}" if board_id else ", no board"))
+    out(f"  signed in; the sign-in is kept in {jira_auth.grant_path(b)}, readable by you alone")
+    out(f"  settings: {b.dir / 'board.toml'}  (how your columns are used: check them once)")
+    out("\nnext: manager read")
     return 0
 
 
@@ -426,6 +521,11 @@ def cmd_doctor(args):
         if b.source == "github":
             token, where = credentials.load_token(b)
             line(bool(token), f"board {b.name}: token from {where}" + ("" if token else " NOT FOUND"))
+        elif b.source == "jira":
+            app = jira_auth.app_path(h).exists()
+            signed = jira_auth.grant_path(b).exists()
+            line(app and signed, f"board {b.name}: Jira {b.where}" + ("" if app else "; no Jira app (manager connect jira-app)")
+                 + ("" if signed else f"; not signed in (manager connect jira --board {b.name} --again)"))
         else:
             line(os.path.isdir(b.where), f"board {b.name}: folder {b.where}")
     return 0 if ok else 1
@@ -449,7 +549,7 @@ def parser():
         return s
 
     cmd("init", cmd_init, "set up the home (~/.hearthwood)", board=False)
-    c = sub.add_parser("connect", help="connect a board: github, markdown, or a new token for a board")
+    c = sub.add_parser("connect", help="connect a board: github, jira, markdown, or a new token for a board")
     cs = c.add_subparsers(dest="kind", metavar="<kind>")
     g = cs.add_parser("github", help="a GitHub repository's issues, and its Projects board when the token may read it")
     g.add_argument("--board", required=True, help="a short name for this board, e.g. web")
@@ -464,6 +564,18 @@ def parser():
     t.add_argument("--board", required=True)
     t.add_argument("--token-stdin", action="store_true")
     t.set_defaults(fn=cmd_connect_token)
+    j = cs.add_parser("jira", help="a Jira Cloud project and its board, through your own sign-in in the browser")
+    j.add_argument("--board", required=True, help="a short name for this board, e.g. app")
+    j.add_argument("--site", default="", help="which site, when your sign-in reaches more than one (e.g. acme.atlassian.net)")
+    j.add_argument("--project", default="", help="the project key, e.g. APP (default: choose from a list)")
+    j.add_argument("--board-id", type=int, default=0, help="which of the project's boards (default: its first)")
+    j.add_argument("--paste", action="store_true", help="paste the address the browser lands on, instead of listening for it")
+    j.add_argument("--again", action="store_true", help="sign an existing board in again")
+    j.set_defaults(fn=cmd_connect_jira)
+    ja = cs.add_parser("jira-app", help="the OAuth app hearthwood signs in to Jira with (once per home)")
+    ja.add_argument("--client-id", required=True)
+    ja.add_argument("--secret-stdin", action="store_true", help="read the client secret from standard input")
+    ja.set_defaults(fn=cmd_connect_jira_app)
     m = cs.add_parser("markdown", help="a folder of markdown tickets (the demo board's format)")
     m.add_argument("folder")
     m.add_argument("--board", required=True)
@@ -534,4 +646,6 @@ def main(argv=None):
         from .adapters.github import GitHubError
         if isinstance(e, GitHubError):
             return fail(f"GitHub: {e}")
+        if isinstance(e, (jira.JiraError, jira_auth.JiraAuthError)):
+            return fail(f"Jira: {e}")
         raise

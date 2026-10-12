@@ -6,8 +6,8 @@ snapshot, never on the live tracker, so an analysis can always be read again and
 
 import re
 
-from . import credentials, home
-from .adapters import github, markdown
+from . import credentials, home, jira_auth
+from .adapters import github, jira, markdown
 from .model import Board
 
 # A dependency written in a ticket's text, the way people write them when the tracker has no
@@ -59,6 +59,11 @@ def take(b, transport=None, progress=None):
         board = github.read_board(b.name, b.where, project=int(s.get("project") or 0),
                                   project_owner=s.get("project_owner") or "", token=token, transport=transport,
                                   closed_days=int(s["rules"].get("closed_days", 60)), progress=progress)
+    elif b.source == "jira":
+        auth = jira_auth.BoardAuth(b, transport=transport)
+        board = jira.read_board(b.name, s["cloud_id"], s["site"], s["project"], auth.header, board_id=int(s.get("board_id") or 0),
+                                transport=transport, renew=auth.renew, closed_days=int(s["rules"].get("closed_days", 60)),
+                                progress=progress)
     elif b.source == "markdown":
         board = markdown.read_board(b.name, b.where, done_columns=tuple(s["columns"].get("done", [])))
     else:

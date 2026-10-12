@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.9.0 — 2026-10-12
+
+- **Jira Cloud.** `manager connect jira` reads a Jira project and its board through **your own
+  sign-in in the browser** (Atlassian OAuth 2.0): open the link, choose your site, allow read
+  access. No shared token is ever asked for. The access renews itself, the replaced renewal token
+  is kept at once, and a revoked or expired sign-in asks for `--again`. On a server, forward port
+  8768 or use `--paste`. The OAuth app's id and secret live in the home (`manager connect
+  jira-app`); [Connecting](docs/connecting.md#jira-cloud) says how to register one, which needs
+  no administrator.
+- **What is read from Jira:** open issues and those updated within `closed_days`, in the board's
+  rank order; columns and their statuses from the board; parent and epics, sub-tasks, "is blocked
+  by" links, resolutions (finished, not planned, duplicate), sprint, priority, fix versions, the
+  description and the newest 20 comments (Jira's document format turned into text), and the status
+  changes. Without the board, or its permission, the column is the status, and the snapshot says
+  so; a missing permission is named, not mistaken for a lost sign-in.
+- **Pull requests are not read from Jira** (its development panel has no public API). The snapshot
+  says so, and the rules about pull requests stand down for that board.
+- The default columns know Jira's "Selected for Development" and "Code Review".
+
 ## 0.8.1 — 2026-10-12
 
 - **A filter on Active.** It narrows the points, questions, proposals, findings and the ready list as

@@ -104,11 +104,78 @@ A ticket in a done column is closed unless it says `state: open`. A `## Comments
 description; each `### <date> [who]` under it starts one comment. The demo board in
 `examples/demo-board` uses this format.
 
-## Jira (planned)
+## Jira Cloud
 
-Jira Cloud is next. It will connect the same way, with an API token from
-[id.atlassian.com](https://id.atlassian.com/manage-profile/security/api-tokens) and your email,
-kept in the home like a GitHub token. A browser sign-in ("connect your account") may follow,
-once it is clear whether organizations allow it. Columns, epics, issue links, sprints and
-ranking map onto the same shape as GitHub's, so the facts, the reading and your criteria stay
-the same.
+Hearthwood reads Jira through **your own sign-in**, given in the browser. It never asks for a
+shared token, and it can only read.
+
+```sh
+manager connect jira-app --client-id <id>          # once per home; asks for the app's secret
+manager connect jira --board app [--site acme.atlassian.net] [--project APP] [--board-id N] [--paste]
+```
+
+`manager connect jira` prints a link. Open it, choose your site and allow read access. Atlassian
+sends the browser back to `http://localhost:8768/callback`, where hearthwood is listening, and the
+sign-in is done. It then lists your projects (or takes `--project`) and finds the project's board.
+Signing in again later is `manager connect jira --board app --again`.
+
+**When the browser is on another machine** (hearthwood runs on a server), either forward the port
+first, `ssh -L 8768:127.0.0.1:8768 <server>`, or run with `--paste`: after you allow access, the
+browser lands on an address starting with `http://localhost:8768/callback` that may not open; copy
+the whole address and paste it into the terminal.
+
+### The app
+
+Atlassian lets an outside program sign in only as a registered app, with a client id and a
+secret. Registering one needs an Atlassian account, not an administrator:
+
+1. At [developer.atlassian.com/console/myapps](https://developer.atlassian.com/console/myapps),
+   **Create**, then **OAuth 2.0 integration**. Name it, for example `hearthwood`.
+2. **Permissions**, **Jira API**, **Add**, then **Configure**. Add the classic scope
+   `read:jira-work`, and the granular scopes `read:board-scope:jira-software`,
+   `read:board-scope.admin:jira-software`, `read:sprint:jira-software` and
+   `read:epic:jira-software`. Nothing that writes.
+3. **Authorization**, **OAuth 2.0 (3LO)**: the callback URL is `http://localhost:8768/callback`.
+4. **Settings** shows the client id and the secret: `manager connect jira-app --client-id <id>`,
+   then paste the secret when asked (it is not shown, and it is kept in the home, readable by you
+   alone).
+5. For anyone but the app's owner to sign in with it, turn on **Distribution** (sharing).
+
+One app can serve a whole team: whoever registered it gives the id and secret to the others
+privately. Each person still signs in as themselves and sees only what they may see.
+
+**If your organization blocks it.** An administrator can stop people from allowing outside apps
+("user-installed apps"). Then the consent page says so instead of offering your site, and the
+sign-in cannot be used there.
+
+### What is read
+
+For every open issue of the project, and every issue updated within `closed_days`, in the board's
+rank order. An issue is finished when Jira resolved it, or when its status is in the Done category:
+some workflows never use that category and only resolve, so either one counts.
+
+- the summary, type, status, labels and priority, the fix versions and the sprint
+- the parent (an epic, or the issue a sub-task belongs to), the sub-tasks, and the "is blocked by"
+  links
+- the resolution: Done and the like are finished, Won't Do and the like are not planned, Duplicate
+  is a duplicate
+- the dates, the description, the newest 20 comments with when and by whom, and the status changes
+- the board's columns, in order, and which statuses belong to each: an issue's column is the column
+  its status sits in
+
+Assignees and the authors of comments are read too, but they are only shown when the board has
+`people = true`.
+
+**Not read: pull requests.** Jira keeps them in its development panel, which has no public API.
+The snapshot says so, and the rules about pull requests stand down for a Jira board rather than
+call every card in review unreviewed.
+
+**When the board cannot be read** (the project has none, or the sign-in lacks its permission), an
+issue's column is its status name, and the snapshot says why.
+
+### Keeping the sign-in
+
+The sign-in is kept in `credentials/<board>.jira.json`, readable by you alone. The access it
+gives lasts an hour and is renewed by itself; Atlassian replaces the renewal token every time, and
+hearthwood keeps the new one at once. If you revoke the app (Atlassian account, **Connected apps**)
+or leave it unused for 90 days, `manager read` says so and asks you to sign in again.

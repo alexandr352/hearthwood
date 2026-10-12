@@ -11,9 +11,11 @@ one. Commands about an analysis use the latest one unless you name another with
 | `manager init` | Creates the home, `~/.hearthwood` (or `$HEARTHWOOD_HOME`). It never overwrites what is there. |
 | `manager connect github --board <name> --repo <owner/repo> [--project N] [--project-owner X] [--token-from credentials\|env\|gh] [--token-stdin]` | Connects a GitHub repository, and its Projects board if you give its number. It asks for the token unless it comes from `env` or `gh`. See [Connecting](connecting.md). |
 | `manager connect token --board <name> [--token-stdin]` | Gives a GitHub board a new token. |
+| `manager connect jira-app --client-id <id> [--secret-stdin]` | Keeps the OAuth app hearthwood signs in to Jira with, once per home. See [Connecting](connecting.md#jira-cloud). |
+| `manager connect jira --board <name> [--site S] [--project KEY] [--board-id N] [--paste] [--again]` | Connects a Jira Cloud project through your own sign-in in the browser. `--again` signs an existing board in again. |
 | `manager connect markdown <folder> --board <name>` | Connects a folder of markdown tickets. |
 | `manager boards` | Lists the boards and when each was last read. |
-| `manager doctor` | Checks Python, the Claude Code CLI, the home, and every board's token or folder. |
+| `manager doctor` | Checks Python, the Claude Code CLI, the home, and every board's token, Jira sign-in or folder. |
 
 ## Reading and analysing
 

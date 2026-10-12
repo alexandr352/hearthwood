@@ -261,6 +261,8 @@ class Analysis:
                          f"no update for {int(age)} days (the limit is {int(limit)}).", {"days": round(age, 1)})
 
     def r_pull_requests(self):
+        if not self.board.prs_read:
+            return
         for it in self.open_items():
             role = self.role(it)
             merged = [p for p in it.prs if p.state == "merged"]
