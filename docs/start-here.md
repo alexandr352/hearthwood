@@ -13,8 +13,9 @@ command.
 ## What you need
 
 - **A Mac.** Linux works the same way. Windows is not tested yet (there are notes for it below).
-- **Two short pieces of text from whoever set hearthwood up for your team:** an *app id* and an
-  *app secret*. They are what lets hearthwood ask Jira for your permission. Keep the secret to
+- **Two short pieces of text, an *app id* and an *app secret*.** They are what lets hearthwood ask
+  Jira for your permission. Usually whoever set hearthwood up for your team sends them to you. If
+  that is you, they are on your Atlassian app's page (step 6 says where). Keep the secret to
   yourself, like a password.
 - **Your Jira**, the one you already use at work (Jira Cloud, an address ending in
   `.atlassian.net`).
@@ -33,7 +34,7 @@ No GitHub account is needed: hearthwood is public, at
 | **uv** | A small helper that installs hearthwood, the Python it needs, and its updates, so you never deal with Python yourself. |
 | **git** | The tool that fetches hearthwood from GitHub. Your Mac installs it for you when it is first needed. |
 | **sign-in** | You allowing hearthwood to read your Jira, in your browser, the way you allow other apps. |
-| **app id and secret** | Hearthwood's own name and password at Atlassian. Not your password: hearthwood never sees that. |
+| **app id and secret** | Hearthwood's own name and password at Atlassian; Atlassian calls them **Client ID** and **Secret**. Not your password: hearthwood never sees that. |
 | **the home** | The folder `~/.hearthwood` on your laptop, where hearthwood keeps everything it reads and everything you tell it. |
 
 ## 1. Open Terminal
@@ -112,7 +113,15 @@ Every line should start with `ok`.
 
 ## 6. Connect your Jira
 
-**First, the app (once).** Put in the app id you were given, in place of `PASTE-APP-ID`:
+**First, the app (once).** You need its two pieces of text, the app id and the app secret:
+
+- **Someone sent them to you:** use those.
+- **You registered the app yourself** ([Connecting](connecting.md#jira-cloud) shows how): open
+  [developer.atlassian.com/console/myapps](https://developer.atlassian.com/console/myapps), click
+  your app, then **Settings** in the menu on the left. The **Client ID** is the app id. The
+  **Secret** is below it: copy it when the command asks for it.
+
+Put in the app id in place of `PASTE-APP-ID`:
 
 ```sh
 manager connect jira-app --client-id PASTE-APP-ID
@@ -228,7 +237,8 @@ Hearthwood signs in to Jira as a registered Atlassian app. One app serves the wh
 person still signs in as themselves and sees only what they may see. Before you send this guide:
 
 1. **Register the app** once, as [Connecting](connecting.md#jira-cloud) describes. It needs an
-   Atlassian account, not an administrator.
+   Atlassian account, not an administrator. Its **Settings** page holds the **Client ID** (the
+   app id in this guide) and the **Secret**.
 2. **Switch on sharing for the app:** at
    [developer.atlassian.com/console/myapps](https://developer.atlassian.com/console/myapps), your
    app, **Distribution**, **Edit**, set it to **Sharing** and answer what Atlassian asks (a
