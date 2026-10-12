@@ -186,9 +186,9 @@ manager ui
 
 ## Your day with hearthwood
 
-1. In Terminal: `manager ui`. On the page, the **Claude** tab has **Read the board and run the
-   facts** (free) and **Run a reading** (one Claude session); the page refreshes itself when it is
-   done. The top row chooses what you see: **Last 60 days** or **All time**, **This sprint** or
+1. In Terminal: `manager ui`. On the page, the **Claude** tab has **Read the board** (free) and
+   **Ask Claude to read it** (one Claude session, for the part of the board chosen at the top; it
+   says how big that is before you press); the page refreshes itself when it is done. The top row chooses what you see: **Last 60 days** or **All time**, **This sprint** or
    **Everything**.
 2. On the page, go through **What needs attention**. For each point press **agree** or
    **disagree** and say why in a line. Your reasons are what hearthwood learns from.

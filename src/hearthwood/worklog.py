@@ -66,6 +66,7 @@ box-shadow:-4px 0 24px rgba(0,0,0,.18);transform:translateX(105%);transition:tra
 #panel .desc{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
 #panel .talk .desc{border-top:0;padding-top:4px;margin-top:0}#panel .talk{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 #panel .badge.new{margin-left:6px;color:var(--amber);border-color:var(--amber)}
+.runrow{display:flex;gap:12px;align-items:baseline;margin:8px 0}.runrow .act{white-space:nowrap}
 .tools .viewswitch{margin:0 6px 0 0}.tools .viewswitch button{padding:4px 11px}
 .scope{display:inline-flex;flex-wrap:wrap;gap:6px;margin:6px 12px 10px 0;vertical-align:top}.scope button{font:13px var(--font);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:6px 14px;color:var(--mute);cursor:pointer}.scope button[aria-pressed=true]{color:var(--ink);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 #panel h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:16px 0 4px}
@@ -546,7 +547,13 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
         if v.get("analysis") == d.name or v.get("kind") == "finding":
             verdicts[v["target"] if v.get("kind") != "finding" else v["target"]] = v
     if r:
-        parts.append(f"<h2>What needs attention</h2><div class='card summary'>{_prose(r.get('summary', ''), items, ref)}</div>")
+        try:
+            seen = json.loads((d / "view.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            seen = {"view": "all-all"}
+        covers = ("" if seen.get("view", "all-all") == "all-all" else
+                  f"<span class='mute small'>Claude read {E(seen.get('label', ''))}: {seen.get('cards')} of {seen.get('of')} cards</span>")
+        parts.append(f"<h2>What needs attention {covers}</h2><div class='card summary'>{_prose(r.get('summary', ''), items, ref)}</div>")
         for n, a in enumerate(r.get("attention") or [], 1):
             v = verdicts.get(f"A{n}")
             parts.append(f"<div class=card><div class=row><span class=id>A{n}</span><h3>{_prose(a['title'], items, ref)}</h3>"
@@ -814,19 +821,40 @@ def claude_section(h, bs, ui):
         rows.append(f"<tr><td>{label}</td><td>{ctl}</td><td class='mute small'>{E(MODEL_NOTES.get((role, now), ''))}</td></tr>")
     parts.append("<h3 class=sh>Models</h3><table class=narrow>" + "".join(rows) + "</table>")
     acts = []
+    model = cfg["models"].get("analyst", "")
     for b in bs:
+        sizes = _reading_sizes(h, b)
+        per_char = _cost_per_char(h, b, model)
+        lines = []
+        for v, (findings, total, cards, of, chars) in sizes.items():
+            label = sprints.VIEW_LABELS[v].format(days=int(b.settings["rules"].get("recent_days", 60)))
+            tokens = max(1, round(chars / 4 / 1000))
+            est = (f"About ${per_char * chars:.2f} on {model.capitalize()}, from your earlier readings."
+                   if per_char else f"No estimate yet on {model.capitalize()}: the first reading's cost shows below.")
+            cmd = f"manager analyze -b {b.name}" + (f" --view {v}" if v != "all-all" else "")
+            lines.append(f"<div class=small data-variant={v}>For the view at the top, {E(label)}: {findings} of {total} findings, "
+                         f"{cards} of {of} cards; about {tokens},000 tokens to start, and it opens the tickets it needs, at "
+                         f"most {int(cfg['reading'].get('max_turns', 30))} steps. {E(est)}"
+                         + ("" if ui else f"<div class=cmdhint>{E(cmd)}</div>") + "</div>")
+        read_line = ("Copies the board from the tracker (about four minutes for 2,000 issues) and works out the facts. "
+                     "No Claude, no cost.")
         if ui:
-            acts.append(f"<div class='card runbox' data-board=\"{E(b.name)}\"><b>{E(b.name)}</b> "
-                        f"<button type=button class=act data-run=facts>Read the board and run the facts</button> "
-                        f"<button type=button class=act data-run=reading>Run a reading</button>"
-                        f"<div class='mute small runstate'></div></div>")
+            acts.append(f"<section class='card runbox' data-board=\"{E(b.name)}\"><b>{E(b.name)}</b>"
+                        f"<div class=runrow><button type=button class=act data-run=facts>Read the board</button>"
+                        f"<span class='mute small'>{E(read_line)}</span></div>"
+                        f"<div class=runrow><button type=button class=act data-run=reading>Ask Claude to read it</button>"
+                        f"<div class='mute small'>Claude reads the facts of the copy you have (it does not read the board "
+                        f"again) and says what needs your attention. This is the one that costs. {''.join(lines)}</div></div>"
+                        f"<div class='mute small runstate'></div></section>")
         else:
-            acts.append(f"<div class=card><b>{E(b.name)}</b><div class=cmdhint>manager analyze --read --facts-only -b {E(b.name)}"
-                        f"</div><div class=cmdhint>manager analyze --read -b {E(b.name)}</div></div>")
+            acts.append(f"<section class=card data-board=\"{E(b.name)}\"><b>{E(b.name)}</b>"
+                        f"<p class=small><b>Read the board:</b> {E(read_line)}</p><div class=cmdhint>manager analyze --read "
+                        f"--facts-only -b {E(b.name)}</div><p class=small><b>Ask Claude to read it:</b> Claude reads the facts "
+                        f"of the copy you have and says what needs your attention. This is the one that costs.</p>"
+                        + "".join(lines) + "</section>")
     if acts:
-        parts.append("<h3 class=sh>Run</h3><p class='mute small'>Reading the board and the facts call no model and cost nothing. "
-                     "A reading is one Claude session with the model above; it takes a few minutes. One run at a time; the "
-                     "page refreshes itself when it is done.</p>" + "".join(acts))
+        parts.append("<h3 class=sh>Run</h3><p class='mute small'>One run at a time; the page refreshes itself when it is "
+                     "done. Nothing is ever written to your board.</p>" + "".join(acts))
     runs = home.read_jsonl(h / "runs.jsonl")
     total = sum(r.get("cost_usd") or 0 for r in runs)
     if runs:
@@ -845,6 +873,40 @@ def claude_section(h, bs, ui):
                  "<code>manager ui</code> serves this page with the spirit beside it; <code>manager chat</code> talks in the "
                  "terminal.") + "</p>")
     return parts
+
+
+def _reading_sizes(h, b):
+    """{view: (findings in view, all findings, cards in view, all cards, characters the reading starts with)}."""
+    d, snap = b.latest_analysis(), b.latest_snapshot()
+    if not d or not snap or not (d / "facts.json").exists():
+        return {}
+    fx = json.loads((d / "facts.json").read_text(encoding="utf-8"))
+    items = json.loads(snap.read_text(encoding="utf-8"))["items"]
+    crit = len((h / "criteria.md").read_text(encoding="utf-8")) if (h / "criteria.md").exists() else 0
+    out = {}
+    views = sprints.VIEWS if fx.get("sprint", {}).get("keys") else ("all-recent", "all-all")
+    for v in views:
+        keep = sprints.view_keys(items, v, fx["fetched_at"], int(b.settings["rules"].get("recent_days", 60)))
+        shown = [f for f in fx["findings"] if keep.intersection(f["keys"])]
+        chars = 6000 + crit + sum(len(f["title"]) + len(f["says"]) + 60 for f in shown)
+        out[v] = (len(shown), len(fx["findings"]), len(keep), len(items), chars)
+    return out
+
+
+def _cost_per_char(h, b, model):
+    """What a reading on `model` has cost per character it started with, from this home's last readings."""
+    runs = [r for r in home.read_jsonl(h / "runs.jsonl") if r.get("board") == b.name
+            and str(r.get("label", "")).startswith("reading") and isinstance(r.get("cost_usd"), (int, float))
+            and model and model in str(r.get("model", ""))]
+    cost = {}
+    for r in runs:
+        cost[r.get("analysis")] = cost.get(r.get("analysis"), 0) + r["cost_usd"]
+    ratios = []
+    for name, c in list(cost.items())[-5:]:
+        m = b.analyses / str(name) / "mission.md"
+        if m.exists() and m.stat().st_size:
+            ratios.append(c / m.stat().st_size)
+    return sum(ratios) / len(ratios) if ratios else None
 
 
 def build(h=None):

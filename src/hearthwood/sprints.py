@@ -80,3 +80,29 @@ def active_keys(items):
         if s and s["name"] in names:
             out.add(it["key"] if isinstance(it, dict) else it.key)
     return out
+
+
+VIEWS = ("sprint-recent", "sprint-all", "all-recent", "all-all")
+VIEW_LABELS = {"sprint-recent": "this sprint, cards touched in the last {days} days", "sprint-all": "this sprint",
+               "all-recent": "every card touched in the last {days} days", "all-all": "the whole board"}
+
+
+def view_keys(items, view, fetched_at, recent_days):
+    """The keys of the cards in a view: 'sprint-' keeps the running sprint's cards (when there is one),
+    '-recent' keeps cards updated within `recent_days` of the read."""
+    from .facts import days_between, parse_ts
+    if view not in VIEWS:
+        raise ValueError(f"a view is one of {', '.join(VIEWS)}")
+    scope, time = view.split("-")
+    keys = {(it["key"] if isinstance(it, dict) else it.key) for it in items}
+    if scope == "sprint":
+        inside = active_keys(items)
+        if inside:
+            keys &= inside
+    if time == "recent":
+        now = parse_ts(fetched_at)
+        def fresh(it):
+            t = parse_ts((it.get("updated") if isinstance(it, dict) else it.updated) or "")
+            return bool(now and t and days_between(t, now) <= recent_days)
+        keys &= {(it["key"] if isinstance(it, dict) else it.key) for it in items if fresh(it)}
+    return keys

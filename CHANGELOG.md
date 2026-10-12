@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.1 — 2026-10-12
+
+- **Two clear buttons on the Claude tab.** **Read the board** copies the board and works out the
+  facts (no Claude, no cost). **Ask Claude to read it** has Claude read the copy you have (it no
+  longer reads the board again), and says beside it what it will be given and what it may cost.
+- **The reading follows the view.** Asked from the page, or with `manager analyze --view`, the
+  reading gets only the findings and cards in view (and the cards they link to), and is told so in
+  so many words; nothing is cut silently. On a large real board: facts 94 KB to 35 KB, the card
+  list 254 KB to 63 KB. Active says which view a reading covered.
+- **Its size before you press:** the findings and cards in view and about how many tokens the
+  reading starts with; after your first reading on that model, an estimate from your own readings.
+- **A ceiling:** `[reading] max_turns = 30` steps per reading, passed to Claude Code. A reading that
+  reaches it is recorded as unfinished and the facts stand.
+
 ## 0.11.0 — 2026-10-12
 
 - **The view, for every tab.** The top row holds **Last 60 days | All time** and, with a running

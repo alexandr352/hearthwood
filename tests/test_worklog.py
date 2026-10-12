@@ -127,7 +127,9 @@ class Page(unittest.TestCase):
         page = self.build()
         self.assertIn("data-tab=claude", page)
         self.assertIn("manager model reading opus|sonnet", page)
-        self.assertIn("manager analyze --read -b demo", page)
+        self.assertIn("manager analyze --read --facts-only -b demo", page)      # Read the board
+        self.assertIn("manager analyze -b demo --view all-recent", page)          # Ask Claude, for the view
+        self.assertIn("Ask Claude to read it", page)
         self.assertNotIn("href=#calls", page)                       # no top-row button that goes nowhere
         self.assertNotIn("class=runbox", page)
 

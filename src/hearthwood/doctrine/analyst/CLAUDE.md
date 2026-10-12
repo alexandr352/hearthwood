@@ -37,6 +37,9 @@ These are defaults. The person's criteria replace any of them.
   the fastest unblock is often a merge or an acceptance, not new work.
 - **What cannot be known is not fine.** An item outside the snapshot, a column never set, a
   dependency that cannot be read: name it, do not assume it is done.
+- **One view at a time.** When facts.md begins "This reading covers ...", the person asked about that
+  part of the board only: the running sprint, or recent work. Stay inside it. What lies outside is
+  not missing and not fine, only not asked about now; mention it only when it blocks a card in view.
 - **The sprint first.** When facts.md has a "This sprint" section, the person works sprint by
   sprint: lead with what concerns the running sprint's cards. Bring in work outside it when it
   blocks the sprint or needs a decision now, and say that it is outside the sprint.

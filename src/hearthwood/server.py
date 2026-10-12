@@ -28,7 +28,7 @@ from urllib.parse import parse_qs, urlparse
 
 import re
 
-from . import claude, criteria, home, spirit, worklog
+from . import claude, criteria, home, spirit, sprints, worklog
 
 KEY = secrets.token_urlsafe(24)
 CHAT_LOCK = threading.Lock()
@@ -93,10 +93,13 @@ def run_state(h):
     return st
 
 
-def start_run(h, board, kind):
-    """Start `manager analyze --read [--facts-only] -b <board>` in the background: one at a time."""
+def start_run(h, board, kind, view="all-all"):
+    """In the background, one at a time: kind 'facts' reads the board and works out the facts (`manager analyze
+    --read --facts-only`); kind 'reading' has Claude read the latest copy for a view (`manager analyze --view`)."""
     if kind not in ("facts", "reading"):
         raise ValueError("a run is facts or reading")
+    if view not in sprints.VIEWS:
+        raise ValueError(f"a view is one of {', '.join(sprints.VIEWS)}")
     names = [b.name for b in home.boards(h)]
     if board not in names:
         raise ValueError(f"no board named {board!r}")
@@ -106,13 +109,14 @@ def start_run(h, board, kind):
         logs = h / "runs"
         logs.mkdir(exist_ok=True)
         log = logs / f"{home.stamp()}-{board}-{kind}.log"
-        cmd = [sys.executable, "-m", "hearthwood", "analyze", "--read", "-b", board] + (["--facts-only"] if kind == "facts" else [])
+        cmd = [sys.executable, "-m", "hearthwood", "analyze", "-b", board] + (
+            ["--read", "--facts-only"] if kind == "facts" else ["--view", view])
         here = str(Path(__file__).resolve().parent.parent)         # the same hearthwood as this server, however installed
         env = dict(os.environ, HEARTHWOOD_HOME=str(h),
                    PYTHONPATH=os.pathsep.join(x for x in (here, os.environ.get("PYTHONPATH", "")) if x))
         f = open(log, "w", encoding="utf-8")
         p = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, env=env, start_new_session=True)
-        st = {"kind": kind, "board": board, "pid": p.pid, "started": home.now_iso(), "running": True, "log": str(log)}
+        st = {"kind": kind, "board": board, "view": view, "pid": p.pid, "started": home.now_iso(), "running": True, "log": str(log)}
         run_path(h).write_text(json.dumps(st), encoding="utf-8")
 
     def wait():
@@ -340,7 +344,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.chat(str(body.get("message") or "").strip(), body.get("about"))
         if url.path == "/api/run":
             try:
-                st = start_run(self.h, str(body.get("board") or ""), str(body.get("kind") or ""))
+                st = start_run(self.h, str(body.get("board") or ""), str(body.get("kind") or ""), str(body.get("view") or "all-all"))
             except ValueError as e:
                 return self.send(HTTPStatus.BAD_REQUEST, str(e))
             except RuntimeError as e:
@@ -599,7 +603,7 @@ document.querySelectorAll('[data-model-role]').forEach(function(g){g.addEventLis
   var r=await fetch('/api/model',{method:'POST',headers:{'X-HW-Key':KEY,'Content-Type':'application/json'},
     body:JSON.stringify({role:g.dataset.modelRole,model:x.dataset.model})});
   if(r.ok)g.querySelectorAll('button[data-model]').forEach(function(y){y.setAttribute('aria-pressed',String(y===x))})})});
-function runText(st){if(!st||!st.kind)return '';var what=st.kind==='reading'?'reading':'read and facts';
+function runText(st){if(!st||!st.kind)return '';var what=st.kind==='reading'?'reading by Claude':'read of the board';
   if(st.running)return 'Running the '+what+' for '+st.board+' since '+String(st.started).slice(11,16)+' UTC. The page refreshes when it is done.';
   return 'Last: the '+what+' for '+st.board+(st.code===0?' finished at ':' stopped with an error at ')+String(st.ended||'').slice(11,16)+' UTC.'
     +(st.code!==0&&st.tail?' '+st.tail.trim().split('\n').slice(-2).join(' '):'')}
@@ -607,8 +611,10 @@ async function runPoll(){try{var st=await (await fetch('/api/run',{headers:{'X-H
   document.querySelectorAll('.runbox').forEach(function(bx){bx.querySelector('.runstate').textContent=st.board===bx.dataset.board?runText(st):'';
     bx.querySelectorAll('button[data-run]').forEach(function(x){x.disabled=!!st.running})})}catch(e){}}
 document.querySelectorAll('.runbox').forEach(function(bx){bx.addEventListener('click',async function(e){var x=e.target.closest('button[data-run]');if(!x)return;
-  if(x.dataset.run==='reading'&&!confirm('Run a reading of '+bx.dataset.board+'? It is one Claude session with the model chosen above.'))return;
-  var r=await fetch('/api/run',{method:'POST',headers:{'X-HW-Key':KEY,'Content-Type':'application/json'},body:JSON.stringify({board:bx.dataset.board,kind:x.dataset.run})});
+  if(x.dataset.run==='reading'){var line=bx.querySelector('[data-variant]:not([hidden])');
+    if(!confirm('Ask Claude to read '+bx.dataset.board+'?\n\n'+(line?line.textContent:'One Claude session with the model chosen above.')))return}
+  var view=window.variantOf?variantOf(bx.dataset.board):'all-all';
+  var r=await fetch('/api/run',{method:'POST',headers:{'X-HW-Key':KEY,'Content-Type':'application/json'},body:JSON.stringify({board:bx.dataset.board,kind:x.dataset.run,view:view})});
   if(!r.ok)bx.querySelector('.runstate').textContent=await r.text();runPoll()})});
 if(document.querySelector('.runbox')){runPoll();setInterval(runPoll,4000)}
 window.hwCard=function(b,k){return fetch('/api/card?board='+encodeURIComponent(b)+'&key='+encodeURIComponent(k),

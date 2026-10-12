@@ -144,7 +144,7 @@ class Page(unittest.TestCase):
         meta = json.loads(re.search(r'<script type=application/json class=boardmeta data-board="work">(.*?)</script>', page).group(1))
         self.assertEqual(meta["sprint"], ["#1", "#2", "#3"])
         self.assertEqual(page.count("<div class=tiles data-variant="), 4)                  # the totals, once per view
-        self.assertEqual(page.count("<div data-variant="), 4)                              # Stats, once per view
+        self.assertEqual(page.count("Counted by plain code from the read"), 4)             # Stats, once per view
         self.assertIn("data-group=sprint aria-pressed=true>by sprint", page)
         order = json.loads(re.search(r'data-sprints="([^"]*)"', page).group(1).replace("&quot;", '"'))
         self.assertEqual([s["name"] for s in order], ["Sprint 9", "Sprint 10", "Groomed", "Sprint 8"])

@@ -155,7 +155,7 @@ class CostLedger:
 
 def run(*, claude_bin, cwd, prompt, model, timeout, label, costs, resume=None, tools=None,
         settings=None, setting_sources=None, append_system_prompt=None, add_dirs=(), env_extra=None,
-        strict_mcp=True, agents=None, plugin_dirs=()):
+        strict_mcp=True, agents=None, plugin_dirs=(), max_turns=None):
     """One `claude --print` call. Never raises for a failed call: the result says why."""
     # stream-json: the same final result as json, plus the rate-limit events the account's
     # usage is read from (the 5-hour session and the week), at no cost.
@@ -179,6 +179,8 @@ def run(*, claude_bin, cwd, prompt, model, timeout, label, costs, resume=None, t
         cmd += ["--plugin-dir", str(d)]
     if resume:
         cmd += ["--resume", resume]
+    if max_turns:
+        cmd += ["--max-turns", str(int(max_turns))]
     env = dict(os.environ)
     # --print returns the final turn only: a session that backgrounds a task and ends its
     # turn "waiting" has returned nothing. Background tasks are off for every call.
@@ -215,6 +217,9 @@ def run(*, claude_bin, cwd, prompt, model, timeout, label, costs, resume=None, t
     by_type = (out.get("subagent_stats") or {}).get("by_type") if isinstance(out.get("subagent_stats"), dict) else None
     if isinstance(by_type, dict):
         res.agents = {k: v for k, v in by_type.items() if isinstance(v, int) and v}
+    if out.get("subtype") == "error_max_turns":
+        res.error = f"it reached its ceiling of {max_turns} steps before answering ([reading] max_turns in config.toml)"
+        return res
     if p.returncode != 0 or out.get("is_error"):
         res.error = f"session error: {str(out.get('result'))[:400]}"
         res.walled = walled(cwd, res.session_id or resume, res.error, t0)

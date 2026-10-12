@@ -517,8 +517,8 @@ class Analysis:
                     f"items, open and closed; similar.md lists each open item's {s['k']} closest.")
         return "Duplicates were compared by title words only" + (f" ({s['why']})." if s.get("why") else ".")
 
-    def similar_markdown(self):
-        """For the reading: every open item's closest matches. Candidates, never verdicts."""
+    def similar_markdown(self, keep=None):
+        """For the reading: every open item's closest matches (in view, when `keep` is given). Candidates, never verdicts."""
         if not self.similar:
             return "# Items that read alike\n\n(not searched: " + self.search_line() + ")\n"
         k, n = self.search["k"], self.search["searched"]
@@ -528,18 +528,26 @@ class Analysis:
                "close matches are related work (the same screen, the same file), not the same work twice. Open both "
                "items before you call two of them duplicates. (linked) = the board already ties the two together.", ""]
         for it in sorted(self.open_items(), key=lambda i: _num(i.key)):
+            if keep is not None and it.key not in keep:
+                continue
             hits = self.similar.get(it.key) or []
             cells = [f"{o} {m:.2f}" + (" (linked)" if self.linked(it.key, o) else "")
                      + (f" ({self.items[o].state})" if self.items[o].state != "open" else "") for o, m in hits]
             out.append(f"{it.key} | " + (" | ".join(cells) if cells else "-"))
         return "\n".join(out) + "\n"
 
-    def to_markdown(self, verdicts=None, decided=None):
+    def to_markdown(self, verdicts=None, decided=None, keep=None, view_label=""):
+        """facts.md. With `keep`, only the findings that touch a card in view, and it says so."""
         verdicts, decided = verdicts or {}, decided or {}
         f = self.flow
+        shown = self.findings if keep is None else [x for x in self.findings if keep.intersection(x.keys)]
         out = [f"# Facts of board {self.board.name}", "",
                f"Read {self.board.fetched_at} from {self.board.source} {self.board.where}.", "",
                self.search_line(), ""]
+        if keep is not None:
+            out += [f"**This reading covers {view_label}: {len(keep)} of {len(self.items)} cards, and the "
+                    f"{len(shown)} of {len(self.findings)} findings that touch them.** The rest of the board is outside "
+                    "this reading: it is not missing and not fine, only not asked about now. Do not go looking for it.", ""]
         if self.board.notes:
             out += ["## What could not be read", ""] + [f"- {n}" for n in self.board.notes] + [""]
         out += ["## Flow", "",
@@ -562,7 +570,7 @@ class Analysis:
                     f"- findings touching the sprint: {', '.join(sp['findings']) or '(none)'}", ""]
         out += ["## Findings", "", "Each finding: id, rule, severity, what it says. The person's earlier verdict on the "
                 "same finding follows it when there is one.", ""]
-        for x in self.findings:
+        for x in shown:
             out.append(f"### {x.id} [{x.rule}, {x.severity}] {x.title}")
             out.append(x.says)
             v = verdicts.get(x.id)
@@ -575,6 +583,8 @@ class Analysis:
             out.append("")
         talk = []
         for it in sorted(self.open_items(), key=lambda i: _num(i.key)):
+            if keep is not None and it.key not in keep:
+                continue
             new = new_comments(it, decided.get(it.key))
             if new:
                 talk.append(f"- {it.key}: {count_of(len(new), 'new comment')} since your last decision on it "
@@ -586,13 +596,24 @@ class Analysis:
         return "\n".join(out)
 
 
-def board_index(board, analysis, decided=None):
-    """One line per item, for the reading to search: key | state | column | type | title | ..."""
+def board_index(board, analysis, decided=None, keep=None):
+    """One line per item, for the reading to search: key | state | column | type | title | ...
+    With `keep`, the cards in view and the cards they link to (parent, sub-items, dependencies)."""
     decided = decided or {}
-    lines = ["# Every item on the board, one per line", "",
+    items = board.by_key()
+    listed = None
+    if keep is not None:
+        listed = set(keep)
+        for k in keep:
+            it = items[k]
+            listed.update(x for x in [it.parent] + list(it.children) + analysis.deps(it) + list(it.blocking) if x in items)
+    lines = (["# Every item on the board, one per line", ""] if listed is None else
+             [f"# The cards in view and the cards they link to: {len(listed)} of {len(items)}", ""]) + [
              "key | state | column | type | parent | depends on | pull requests | labels | comments | updated | title",
              ""]
     for it in sorted(board.items, key=lambda i: _num(i.key)):
+        if listed is not None and it.key not in listed:
+            continue
         deps = analysis.deps(it)
         prs = ",".join(f"{p.number or ''}:{p.state}" for p in it.prs)
         new = len(new_comments(it, decided.get(it.key)))

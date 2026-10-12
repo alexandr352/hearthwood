@@ -12,7 +12,7 @@ import sys
 import textwrap
 from urllib.parse import urlparse
 
-from . import __version__, criteria, credentials, facts, guide, home, jira_auth, reading, search, snapshot, spirit, worklog
+from . import __version__, criteria, credentials, facts, guide, home, jira_auth, reading, search, snapshot, spirit, sprints, worklog
 from .adapters import jira
 
 
@@ -379,7 +379,7 @@ def cmd_analyze(args):
         board = snapshot.load(snap)
     a = facts.Analysis(board, b.settings).run()
     verdicts = criteria.latest_by_target(b.home, b.name)
-    d = reading.prepare(b, board, a, verdicts)
+    d = reading.prepare(b, board, a, verdicts, view=args.view)
     counts = {}
     for f in a.findings:
         counts[f.severity] = counts.get(f.severity, 0) + 1
@@ -735,6 +735,9 @@ def parser():
     a.add_argument("--facts-only", action="store_true", help="the facts alone; no model call, no cost")
     a.add_argument("--read", action="store_true", help="take a fresh snapshot first")
     a.add_argument("--model", help="the model for this reading (default: [models] analyst in config.toml)")
+    a.add_argument("--view", choices=sprints.VIEWS, default="all-all",
+                   help="what the reading is given: the running sprint and/or cards touched in the last recent_days "
+                        "(default: the whole board)")
     s = cmd("show", cmd_show, "the latest analysis, or one point of it: a finding id, A<n>, Q<n> or P<n>", analysis=True)
     s.add_argument("target", nargs="?")
     f = cmd("findings", cmd_findings, "list the findings of the latest analysis", analysis=True)

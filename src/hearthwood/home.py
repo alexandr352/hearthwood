@@ -50,6 +50,7 @@ reading = 900
 
 [reading]
 reconsider = 3                 # tries for an answer that breaks its contract
+max_turns = 30                 # steps one reading may take (each file it opens is one); a ceiling on its cost
 """
 
 DEFAULT_BOARD = """\

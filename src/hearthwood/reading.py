@@ -11,7 +11,7 @@ import json
 import re
 from pathlib import Path
 
-from . import claude, criteria, facts, fence, home
+from . import claude, criteria, facts, fence, home, sprints
 
 ACTIONS = ("comment", "link", "unlink", "move", "label", "close", "reopen", "split", "merge", "ask")
 ASKS = ("you", "scope", "product", "engineering")
@@ -125,20 +125,26 @@ def deviation_message(devs):
                       "object, nothing around it:"] + [f"- {d}" for d in devs])
 
 
-def prepare(b, board, analysis, verdicts):
-    """Write the analysis folder the reading works in. Returns its path."""
+def prepare(b, board, analysis, verdicts, view="all-all"):
+    """Write the analysis folder the reading works in. Returns its path. `view` narrows what the reading is
+    given to the cards in that view (sprints.VIEWS); facts.json stays whole, for the page."""
     d, n = b.analyses / home.stamp(), 1
     while d.exists():
         n += 1
         d = b.analyses / f"{home.stamp()}-{n}"
     (d / "items").mkdir(parents=True)
     people = bool(b.settings["rules"].get("people"))
+    days = int(b.settings["rules"].get("recent_days", 60))
+    keep = None if view == "all-all" else sprints.view_keys(board.items, view, board.fetched_at, days)
+    label = sprints.VIEW_LABELS[view].format(days=days)
+    (d / "view.json").write_text(json.dumps({"view": view, "label": label, "cards": len(keep) if keep is not None else len(board.items),
+                                             "of": len(board.items)}), encoding="utf-8")
     decided = criteria.last_decided(b.home, b.name)
     logins = facts.board_logins(board)
     (d / "facts.json").write_text(json.dumps(analysis.to_dict(), indent=1, ensure_ascii=False), encoding="utf-8")
-    (d / "facts.md").write_text(analysis.to_markdown(verdicts, decided), encoding="utf-8")
-    (d / "board.md").write_text(facts.board_index(board, analysis, decided), encoding="utf-8")
-    (d / "similar.md").write_text(analysis.similar_markdown(), encoding="utf-8")
+    (d / "facts.md").write_text(analysis.to_markdown(verdicts, decided, keep, label), encoding="utf-8")
+    (d / "board.md").write_text(facts.board_index(board, analysis, decided, keep), encoding="utf-8")
+    (d / "similar.md").write_text(analysis.similar_markdown(keep), encoding="utf-8")
     for it in board.items:
         (d / "items" / facts.item_file_name(it.key)).write_text(
             facts.item_markdown(it, people, decided.get(it.key), logins), encoding="utf-8")
@@ -157,7 +163,8 @@ def mission(d):
         "",
         SCHEMA,
         "",
-        "board.md in this folder lists every item, one per line; items/<number>.md holds one item whole. Read "
+        "board.md in this folder lists the items, one per line (in a reading of one view: the cards in view and the "
+        "ones they link to); items/<number>.md holds one item whole. Read "
         "what you need to be sure; cite only keys that exist. An item's file ends with its comments, newest first; "
         "read them before you judge the item. similar.md lists, for every open item, the items "
         "that read most like it: candidates for duplicates and for work already done, never verdicts.",
@@ -176,6 +183,7 @@ def run(b, d, board, analysis, claude_bin=None, model=None):
     claude_bin = claude_bin or cfg["claude"]["bin"]
     model = model or cfg["models"]["analyst"]
     tries = int(cfg["reading"].get("reconsider", 3))
+    max_turns = int(cfg["reading"].get("max_turns", 30))
     timeout = int(cfg["timeouts"].get("reading", 900))
     keys = set(board.by_key())
     fids = {f.id for f in analysis.findings}
@@ -190,7 +198,7 @@ def run(b, d, board, analysis, claude_bin=None, model=None):
     for attempt in range(1, tries + 1):
         res = claude.run(claude_bin=claude_bin, cwd=d, prompt=prompt, model=model, timeout=timeout,
                          label=f"reading-{attempt}", costs=costs, resume=session, tools=["Read", "Grep", "Glob"],
-                         settings=settings, setting_sources=["project"],
+                         settings=settings, setting_sources=["project"], max_turns=max_turns,
                          env_extra={"HEARTHWOOD_FENCE_POLICY": json.dumps(policy)})
         rec = res.record()
         rec.update(board=b.name, analysis=d.name, at=home.now_iso())

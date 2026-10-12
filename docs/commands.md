@@ -26,7 +26,7 @@ one. Commands about an analysis use the latest one unless you name another with
 | command | what it does |
 | --- | --- |
 | `manager read` | Takes a snapshot of the board. It calls no model. |
-| `manager analyze [--read] [--facts-only] [--model M]` | Computes the facts on the latest snapshot, then has Claude read them once. `--read` takes a fresh snapshot first. `--facts-only` stops before the reading, so there is no model call and no cost. `--model` picks the model for this one reading. |
+| `manager analyze [--read] [--facts-only] [--model M] [--view V]` | Computes the facts on the latest snapshot, then has Claude read them once. `--read` takes a fresh snapshot first. `--facts-only` stops before the reading, so there is no model call and no cost. `--model` picks the model for this one reading. `--view` gives the reading one part of the board: `sprint-recent`, `sprint-all`, `all-recent` or `all-all` (the default). |
 | `manager show [<id> \| A<n> \| Q<n> \| P<n>]` | With nothing after it, the reading's summary, attention, questions and proposals. With a finding id or one of those points, that one point and its items. |
 | `manager findings [--rule R] [--severity S]` | Lists the findings, each with your last verdict on it. |
 

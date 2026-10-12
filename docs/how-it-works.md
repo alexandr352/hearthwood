@@ -121,6 +121,14 @@ The reading is one Claude Code session, started in the analysis folder:
   `CLAUDE.md` in parent folders are excluded, so a reading behaves the same on every machine.
 - **Mission:** your criteria and the facts, whole, never cut short. It also has the item files to
   open as it needs, and is told to read an item's comments before judging it.
+- **One view at a time.** `manager analyze --view sprint-recent` (or the Claude tab, which passes the
+  view chosen at the top) gives the reading only the findings that touch cards in that view, and a
+  `board.md` of those cards and the ones they link to. `facts.md` begins by saying so: "This reading
+  covers this sprint, cards touched in the last 60 days: 368 of 1963 cards, and the 115 of 318 findings
+  that touch them". Nothing is cut silently. On a large real board that took the reading's facts from
+  94 KB to 35 KB. The page says which view a reading covered.
+- **A ceiling.** `[reading] max_turns` (30) caps the steps one reading may take; each ticket file it
+  opens is one. A reading that reaches it is recorded as unfinished, and the facts stand.
 
 **Comments since your decisions.** A comment can say what a card waits on, that its scope changed,
 or that the work was done elsewhere, and it may have come after you decided something about the
@@ -246,10 +254,15 @@ computed when the page is built, so switching is instant and nothing is estimate
   first label matching `[stats] type_labels`; a *goal* is a card with sub-items, or one labelled
   with `[stats] goal_labels`, so a goal with nothing under it yet still counts.
 - **Claude**: everything that involves Claude. The models of the reading and of the spirit (Opus or
-  Sonnet, written to `config.toml`; also `manager model reading sonnet`), **Read the board and run
-  the facts** (no model, no cost) and **Run a reading** (one Claude session), each in the background,
-  one at a time, the page refreshing itself when it is done; and every model call with its cost.
-  The static page shows the commands instead of the buttons.
+  Sonnet, written to `config.toml`; also `manager model reading sonnet`). Two buttons, each in the
+  background, one at a time, the page refreshing itself when it is done:
+  - **Read the board** copies the board from the tracker and works out the facts. No Claude, no cost.
+  - **Ask Claude to read it** has Claude read the facts of the copy you have, for the view at the top
+    (it does not read the board again). Next to it: how many findings and cards that view holds, about
+    how many tokens the reading starts with, and, after your first reading on that model, an estimate
+    from your own earlier readings.
+
+  And every model call with its cost. The static page shows the commands instead of the buttons.
 
 ### The spirit on the page
 

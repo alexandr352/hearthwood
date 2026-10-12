@@ -109,6 +109,30 @@ class Run(unittest.TestCase):
             self.assertIsNone(r)
             self.assertIn("did not run", status)
 
+    def test_a_reading_of_one_view_is_given_that_view_and_says_so(self):
+        with TempHome() as t:
+            b = home.add_board("demo", "markdown", str(DEMO), h=t.h)
+            toml = b.dir / "board.toml"
+            toml.write_text(toml.read_text().replace("recent_days = 60", "recent_days = 12"))
+            b = home.BoardHome("demo", t.h)
+            board, _ = snapshot.take(b)
+            board.fetched_at = "2026-10-12T00:00:00Z"                  # the demo's dates are fixed; so is "now" here
+            a = facts.Analysis(board, b.settings).run()
+            whole = reading.prepare(b, board, a, {})
+            part = reading.prepare(b, board, a, {}, view="all-recent")
+            self.assertIn("This reading covers every card touched in the last 12 days", (part / "facts.md").read_text())
+            self.assertNotIn("This reading covers", (whole / "facts.md").read_text())
+            self.assertLess(len((part / "board.md").read_text()), len((whole / "board.md").read_text()))
+            self.assertEqual(json.loads((part / "view.json").read_text())["view"], "all-recent")
+            self.assertIn("This reading covers", reading.mission(part))
+
+    def test_the_reading_has_a_ceiling(self):
+        with TempHome() as t:
+            b, board, a, d = demo(t)
+            reading.run(b, d, board, a)
+            self.assertIn("--max-turns", t.calls()[0]["argv"])
+            self.assertEqual(t.calls()[0]["argv"][t.calls()[0]["argv"].index("--max-turns") + 1], "30")
+
     def test_the_reading_sees_criteria_and_earlier_verdicts(self):
         with TempHome() as t:
             b, board, a, d = demo(t)
