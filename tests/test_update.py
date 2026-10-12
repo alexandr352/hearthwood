@@ -55,14 +55,14 @@ class Update(unittest.TestCase):
         log = self.fake('[tool]\nrequirements = [{ name = "hearthwood", directory = "/x/hearthwood-main" }]\n')
         code, text = manager("update")
         self.assertEqual(code, 1)
-        self.assertIn("uv tool install --force git+https://github.com/alexandr352/hearthwood", text)
+        self.assertIn("uv tool install --force --python-preference only-managed git+https://github.com/alexandr352/hearthwood", text)
         self.assertNotIn("upgrade", log.read_text())
 
     def test_not_a_uv_install(self):
         self.fake(receipt=None)
         code, text = manager("update")
         self.assertNotEqual(code, 0)
-        self.assertIn("uv tool install git+https://github.com/alexandr352/hearthwood", text)
+        self.assertIn("uv tool install --python-preference only-managed git+https://github.com/alexandr352/hearthwood", text)
 
     def test_a_failed_upgrade_is_said(self):
         self.fake('requirements = [{ name = "hearthwood", git = "https://x" }]\n', code=3)

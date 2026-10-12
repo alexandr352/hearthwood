@@ -55,8 +55,11 @@ When it finishes, **close Terminal and open it again**. That makes the next comm
 ## 3. Install hearthwood
 
 ```sh
-uv tool install git+https://github.com/alexandr352/hearthwood
+uv tool install --python-preference only-managed git+https://github.com/alexandr352/hearthwood
 ```
+
+(`--python-preference only-managed` tells uv to use its own Python, even if your Mac already has
+another one: an older Python on a Mac can be missing pieces hearthwood needs.)
 
 **If a window pops up** saying the `git` command needs the *command line developer tools*, press
 **Install**, wait until it is done (a few minutes), and run the same line again. That happens
@@ -130,7 +133,8 @@ manager connect jira-app --client-id PASTE-APP-ID
 It asks for the secret. Paste it and press Enter. Nothing appears while you paste; that is on
 purpose, so nobody looking at your screen sees it.
 
-**Then your sign-in.** Choose a short name for your board, in small letters, for example `team`:
+**Then your sign-in.** Choose a short name for your board, in small letters, digits or `-`, no
+spaces and no capitals, for example `team`:
 
 ```sh
 manager connect jira --board team
@@ -191,6 +195,7 @@ the home, not in the program.
 | `git` not found, or the install stops with an error about git | Run `xcode-select --install`, press **Install** in the window that opens, wait, then run step 3 again. |
 | The Atlassian page says your **admin has disabled** user-installed apps | Your organization does not allow it. Tell whoever set hearthwood up; there is nothing to fix on your side. |
 | The Atlassian page says the app is **not available** or **not shared** | The app's sharing is not switched on yet. Tell whoever set hearthwood up. |
+| `certificate could not be verified` | First run `manager update`. If it persists, your company's network inspects secure connections with a certificate this Mac does not know: ask IT for it to be added to the Mac's Keychain. |
 | `cannot listen on 127.0.0.1:8768` | Something else uses that port, often an earlier `manager connect jira` still waiting. Close other Terminal windows, then try again. |
 | `the sign-in … was revoked or has expired` | Sign in again: `manager connect jira --board team --again` |
 | `Claude Code CLI: not found` in `manager doctor` | Step 5. Until then use `manager analyze --facts-only`. |

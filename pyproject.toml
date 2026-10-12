@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hearthwood"
-version = "0.9.1"
+version = "0.9.2"
 description = "Read a project board, see what needs attention, and teach it how you judge. A companion for project managers, built on Claude Code."
 readme = "README.md"
 license = "MIT"
@@ -17,7 +17,7 @@ classifiers = [
   "Environment :: Console",
   "Topic :: Office/Business :: Scheduling",
 ]
-dependencies = ["tomli>=1.1; python_version < '3.11'"]
+dependencies = ["tomli>=1.1; python_version < '3.11'", "truststore>=0.10"]
 
 [project.scripts]
 manager = "hearthwood.cli:main"

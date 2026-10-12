@@ -70,7 +70,7 @@ You need [uv](https://docs.astral.sh/uv/), which brings its own Python, and the
 spirit. The [start-here guide](docs/start-here.md) walks through all of it.
 
 ```sh
-uv tool install git+https://github.com/alexandr352/hearthwood
+uv tool install --python-preference only-managed git+https://github.com/alexandr352/hearthwood
 manager init
 manager doctor
 ```

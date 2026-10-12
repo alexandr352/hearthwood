@@ -5,6 +5,8 @@ import json
 import os
 import shutil
 import sqlite3
+import ssl
+import urllib.error
 import subprocess
 import sys
 import textwrap
@@ -25,6 +27,31 @@ def fail(msg):
 
 def wrap(text, indent="  "):
     return textwrap.fill(text or "", width=96, initial_indent=indent, subsequent_indent=indent)
+
+
+def use_system_certificates():
+    """Trust what the computer trusts (the Mac's Keychain, Windows' store, Linux's CA files), including a
+    company's own certificate where its network inspects secure connections. Without this, Python trusts
+    only its own list, and a Python installed from python.org on a Mac trusts nothing until its
+    "Install Certificates" step was run."""
+    try:
+        import truststore
+        truststore.inject_into_ssl()
+        return True
+    except Exception:
+        return False
+
+
+def network_message(e):
+    """A network failure, said plainly."""
+    reason = getattr(e, "reason", e)
+    text = str(reason)
+    if "CERTIFICATE_VERIFY_FAILED" in text or isinstance(reason, ssl.SSLCertVerificationError):
+        return ("the other side's certificate could not be verified, so nothing was sent. Hearthwood trusts the "
+                "certificates your computer trusts; if this persists, your network inspects secure connections "
+                "with a certificate this computer does not know. See \"If something goes wrong\" in "
+                "docs/start-here.md.")
+    return f"the network did not answer ({text}). Check the connection and try again."
 
 
 def board_of(args):
@@ -135,6 +162,9 @@ def _choose(what, options, given, label, names, flag):
 def cmd_connect_jira(args):
     h, _ = home.init_home()
     app = jira_auth.load_app(h)
+    if not home.BOARD_NAME.match(args.board):
+        return fail("a board name is lowercase letters, digits, '.', '_' or '-', starting with a letter or digit "
+                    f"(for example {args.board.lower()!r})")
     existing = next((x for x in home.boards(h) if x.name == args.board), None)
     if existing and not args.again:
         return fail(f"board {args.board} already exists; `--again` signs it in again")
@@ -227,17 +257,18 @@ def update_source():
 
 
 GIT_SOURCE = "git+https://github.com/alexandr352/hearthwood"
+INSTALL = f"uv tool install --python-preference only-managed {GIT_SOURCE}"
 
 
 def cmd_update(args):
     uv, source = shutil.which("uv"), update_source()
     if not source:
         return fail("hearthwood was not installed with uv here, so it cannot update itself. Install it that way once:\n"
-                    f"  uv tool install {GIT_SOURCE}")
+                    f"  {INSTALL}")
     if source == "directory":
         out("hearthwood was installed from a downloaded folder, which does not change by itself. Switch to the")
         out("version on GitHub once, and from then on `manager update` fetches the newest:")
-        out(f"  uv tool install --force {GIT_SOURCE}")
+        out(f"  {INSTALL.replace('install', 'install --force', 1)}")
         return 1
     out(f"hearthwood {__version__}: looking for a newer version ...")
     if subprocess.run([uv, "tool", "upgrade", "hearthwood"]).returncode != 0:
@@ -690,10 +721,13 @@ def main(argv=None):
     if not getattr(args, "fn", None):
         p.print_help()
         return 0
+    use_system_certificates()
     try:
         return args.fn(args) or 0
     except (ValueError, FileNotFoundError) as e:
         return fail(str(e))
+    except urllib.error.URLError as e:
+        return fail(network_message(e))
     except KeyboardInterrupt:
         print()
         return 130

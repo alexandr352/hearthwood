@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.2 — 2026-10-12
+
+- **The computer's own certificates.** Hearthwood now trusts what the computer trusts (the Mac's
+  Keychain, Windows' store, Linux's certificate files) through `truststore`, its first outside
+  dependency, small and kept by pip's maintainers. Before, a Python installed from python.org on a
+  Mac, or a company network that inspects secure connections, made the Jira sign-in fail at its
+  last step with a certificate error.
+- **Network failures are said in a sentence**, not a traceback; a certificate failure is not
+  retried, since retrying cannot help.
+- **A board name is checked before the Jira sign-in**, so a name with capitals or spaces no longer
+  wastes one.
+- The install line asks uv for its own Python (`--python-preference only-managed`), so an older
+  Python already on the computer is not picked up; the guide's troubleshooting has the certificate
+  row.
+
 ## 0.9.1 — 2026-10-12
 
 - **Public, and installed from GitHub in one line:** `uv tool install

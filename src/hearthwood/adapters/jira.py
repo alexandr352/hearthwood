@@ -48,8 +48,12 @@ def urllib_transport(method, url, headers, body=None, timeout=120):
             return r.status, dict(r.headers), r.read()
     except urllib.error.HTTPError as e:
         return e.code, dict(e.headers or {}), e.read()
-    except (urllib.error.URLError, TimeoutError, OSError) as e:
-        return 599, {}, json.dumps({"message": f"no answer: {getattr(e, 'reason', e)}"}).encode()
+    except urllib.error.URLError as e:
+        if "CERTIFICATE_VERIFY_FAILED" in str(e.reason):
+            raise                              # not a passing failure: retrying cannot help
+        return 599, {}, json.dumps({"message": f"no answer: {e.reason}"}).encode()
+    except (TimeoutError, OSError) as e:
+        return 599, {}, json.dumps({"message": f"no answer: {e}"}).encode()
 
 
 class Jira:

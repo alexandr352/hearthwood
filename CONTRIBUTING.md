@@ -23,7 +23,7 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 .venv/bin/python -m unittest discover -s tests -t tests
 ```
 
-- The code is plain Python 3.10+ with the standard library only (`tomli` on 3.10).
+- The code is plain Python 3.10+ with the standard library, plus `truststore` (the computer's own certificates) and `tomli` on 3.10. A new dependency needs a reason a user would feel.
 - The tests never call a real model or a real tracker. `tests/fake_claude.py` stands in for the
   Claude Code CLI, and a fake transport stands in for GitHub.
 - A new rule in `facts.py` comes with a test that shows the board it fires on and one it does

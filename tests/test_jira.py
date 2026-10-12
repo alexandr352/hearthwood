@@ -354,6 +354,36 @@ def manager(*argv, stdin=""):
     return code, buf.getvalue()
 
 
+class Network(unittest.TestCase):
+    def test_a_certificate_failure_is_said_plainly(self):
+        import ssl
+        import urllib.error
+        e = urllib.error.URLError(ssl.SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed"))
+        msg = cli.network_message(e)
+        self.assertIn("certificate could not be verified", msg)
+        self.assertIn("start-here", msg)
+        self.assertIn("did not answer", cli.network_message(urllib.error.URLError("timed out")))
+
+    def test_a_certificate_failure_is_not_retried(self):
+        import urllib.error
+        calls = []
+
+        def boom(*a, **k):
+            calls.append(1)
+            raise urllib.error.URLError("[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed")
+        old = urllib.request.urlopen
+        urllib.request.urlopen = boom
+        try:
+            with self.assertRaises(urllib.error.URLError):
+                jira.urllib_transport("GET", "https://api.atlassian.com/x", {})
+        finally:
+            urllib.request.urlopen = old
+        self.assertEqual(len(calls), 1)
+
+    def test_the_system_certificates_are_used(self):
+        self.assertTrue(cli.use_system_certificates())
+
+
 class Browser(unittest.TestCase):
     def test_a_server_without_a_display_opens_nothing(self):
         import sys
@@ -396,6 +426,18 @@ class Connect(unittest.TestCase):
             g = json.loads(jira_auth.grant_path(b).read_text())
             self.assertEqual((g["access_token"], g["refresh_token"], g["site_url"]), ("A1", "R1", SITE))
             self.assertNotEqual(manager("connect", "jira", "--board", "app", "--paste")[0], 0)   # exists: needs --again
+
+    def test_a_bad_board_name_stops_before_the_sign_in(self):
+        with TempHome():
+            manager("connect", "jira-app", "--client-id", "CID", "--secret-stdin", stdin="SEC\n")
+            old = jira_auth.urllib_transport
+            jira_auth.urllib_transport = lambda *a, **k: self.fail("no request before the name is checked")
+            try:
+                code, text = manager("connect", "jira", "--board", "Team Board", "--paste")
+            finally:
+                jira_auth.urllib_transport = old
+            self.assertNotEqual(code, 0)
+            self.assertNotIn("auth.atlassian.com", text)
 
     def test_without_an_app_it_says_how_to_add_one(self):
         with TempHome():
