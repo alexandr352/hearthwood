@@ -388,7 +388,7 @@ def serve(port=0, open_browser=True):
         return 2
     link = f"http://127.0.0.1:{httpd.server_address[1]}/?k={KEY}"
     print(f"hearthwood is served on this machine only:\n\n  {link}\n\nCtrl-C stops it.", flush=True)
-    if open_browser and (os.environ.get("DISPLAY") or os.uname().sysname == "Darwin"):
+    if open_browser and home.has_browser():
         threading.Timer(0.5, lambda: webbrowser.open(link)).start()
     try:
         httpd.serve_forever()

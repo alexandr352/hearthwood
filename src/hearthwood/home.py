@@ -91,6 +91,13 @@ goal_labels = []
 SPIRIT_FILES = ("CLAUDE.md", "persona.md")
 
 
+def has_browser():
+    """True where opening a link shows a browser: a Mac, Windows, or a Linux desktop. On a server with no
+    display Python would fall back to a text browser inside the terminal, so nothing is opened there."""
+    import sys
+    return sys.platform in ("darwin", "win32") or bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
+
 def home_dir():
     return Path(os.environ.get("HEARTHWOOD_HOME") or Path.home() / ".hearthwood").expanduser()
 

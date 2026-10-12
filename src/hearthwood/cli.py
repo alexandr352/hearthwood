@@ -142,8 +142,15 @@ def cmd_connect_jira(args):
         return fail(f"no Jira board named {args.board} to sign in again")
     verifier, challenge = jira_auth.new_pkce()
     state = jira_auth.new_state()
+    link = jira_auth.authorize_url(app["client_id"], state, challenge)
     out("Open this link, choose your site and allow hearthwood to read it:\n")
-    out("  " + jira_auth.authorize_url(app["client_id"], state, challenge) + "\n")
+    out("  " + link + "\n")
+    if not args.paste and home.has_browser():
+        import webbrowser
+        try:
+            webbrowser.open(link)
+        except Exception:
+            pass
     if args.paste:
         out("After you allow it, the browser lands on an address starting with http://localhost:8768/callback (the page "
             "itself may not open). Copy that whole address.")

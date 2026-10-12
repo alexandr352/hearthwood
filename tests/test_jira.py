@@ -354,6 +354,26 @@ def manager(*argv, stdin=""):
     return code, buf.getvalue()
 
 
+class Browser(unittest.TestCase):
+    def test_a_server_without_a_display_opens_nothing(self):
+        import sys
+        old = (sys.platform, os.environ.pop("DISPLAY", None), os.environ.pop("WAYLAND_DISPLAY", None))
+        try:
+            sys.platform = "linux"
+            self.assertFalse(home.has_browser())
+            os.environ["DISPLAY"] = ":0"
+            self.assertTrue(home.has_browser())
+            os.environ.pop("DISPLAY")
+            for p in ("darwin", "win32"):
+                sys.platform = p
+                self.assertTrue(home.has_browser())
+        finally:
+            sys.platform = old[0]
+            for k, v in (("DISPLAY", old[1]), ("WAYLAND_DISPLAY", old[2])):
+                if v is not None:
+                    os.environ[k] = v
+
+
 class Connect(unittest.TestCase):
     def test_connect_by_pasting_the_address(self):
         with TempHome() as t:

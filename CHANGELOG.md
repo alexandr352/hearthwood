@@ -18,6 +18,12 @@
 - **Pull requests are not read from Jira** (its development panel has no public API). The snapshot
   says so, and the rules about pull requests stand down for that board.
 - The default columns know Jira's "Selected for Development" and "Code Review".
+- **[Start here](docs/start-here.md)**, a guide for a project manager who is not a developer: the
+  GitHub invitation, Download ZIP, uv, the demo, Claude Code, the Jira sign-in, the day with the
+  page, updating, what goes wrong, removing it. Proven on a clean home with uv 0.13 and its own
+  Python 3.15; the suite also passes on 3.15.
+- `manager connect jira` opens the sign-in page in the browser by itself, where there is one.
+- `manager ui` no longer calls `os.uname()`, which Windows does not have.
 
 ## 0.8.1 — 2026-10-12
 

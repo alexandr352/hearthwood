@@ -7,6 +7,9 @@ think. Your answers become your **criteria**, and every later reading follows th
 Hearthwood **reads only**. It never writes to your board. When it suggests a change, you
 approve or reject it, and it remembers which.
 
+**Not a developer? [Start here](docs/start-here.md):** a step-by-step guide, from the GitHub
+invitation to your Jira board on the page, with no programming.
+
 ```
  your board ── read ──► snapshot ──► facts (plain code) ──► reading (Claude) ──► you
                                           ▲                       ▲               │
@@ -62,7 +65,8 @@ development tickets. Hearthwood looks after the board those tickets live on.
 
 ## Install
 
-You need Python 3.10 or newer, and the [Claude Code](https://claude.com/claude-code) CLI
+The [start-here guide](docs/start-here.md) installs it with [uv](https://docs.astral.sh/uv/), which
+brings its own Python. By hand: you need Python 3.10 or newer, and the [Claude Code](https://claude.com/claude-code) CLI
 (`claude`), logged in.
 
 ```sh
