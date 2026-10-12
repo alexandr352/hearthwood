@@ -1,6 +1,6 @@
 # Criteria
 
-Hearthwood starts with a project manager's common sense: flow before tidiness, in review is not
+Hearthwood starts with the common sense of someone who looks after a board: flow before tidiness, in review is not
 finished, what cannot be known is not fine. Your board is not every board. Criteria are how you
 say what is true on yours.
 

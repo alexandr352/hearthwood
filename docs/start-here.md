@@ -1,4 +1,4 @@
-# Start here: hearthwood for project managers
+# Start here: hearthwood for whoever looks after a board
 
 This guide is for you if you look after a board and have never installed a program from GitHub.
 No programming is needed. You will type a few commands into a window called Terminal; each one is

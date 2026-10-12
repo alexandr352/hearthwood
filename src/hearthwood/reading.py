@@ -25,7 +25,7 @@ SCHEMA = """{
      "keys": ["#12"],                       // the items it is about; every key must be on the board
      "finding_ids": ["stale-1a2b3c"],       // the facts it rests on, by id; [] only if it rests on items you read
      "why": "why it matters for the flow of work, citing what you read",
-     "next_step": "the one thing a project manager would do about it",
+     "next_step": "the one thing the person looking after this board would do about it",
      "confidence": "high | medium | low"}
   ],                                         // at most 10, most important first
   "questions": [

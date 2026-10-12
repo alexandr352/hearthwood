@@ -2,7 +2,7 @@
 
 Every finding, every point of attention and every proposal can be answered: agree, disagree,
 right finding for the wrong reason, or not now, with one line of why. Those lines are the most
-valuable thing hearthwood collects: they say how a project manager actually judges a board. A
+valuable thing hearthwood collects: they say how the person looking after a board actually judges it. A
 verdict you want to keep as a standing rule goes into criteria.md, which every reading reads
 first and which outranks the reading's own defaults.
 """

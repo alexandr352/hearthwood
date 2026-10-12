@@ -1,11 +1,16 @@
 # hearthwood
 
-A companion for project managers who look after a board. It reads your board, works out
+A companion for whoever looks after a board: product owners, delivery leads, scrum masters. It reads your board, works out
 what is ready, what is stuck and why, and what deserves your attention, then asks what you
 think. Your answers become your **criteria**, and every later reading follows them.
 
 Hearthwood **reads only**. It never writes to your board. When it suggests a change, you
 approve or reject it, and it remembers which.
+
+**What it is, and what it is not yet.** Hearthwood looks at the board: the backlog, the flow of
+work, what is ready, stuck or duplicated. It does not yet connect that work to product metrics. A
+product manager's question ("return rate fell last month: what did we ship, and what should we
+try?") is the next thing it is learning to answer.
 
 **Not a developer? [Start here](docs/start-here.md):** a step-by-step guide, from an empty
 laptop to your Jira board on the page, with no programming.

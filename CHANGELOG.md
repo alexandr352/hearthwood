@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.2 — 2026-10-12
+
+- **Said plainly who it is for.** Hearthwood is a board tool: product owners, delivery leads and
+  scrum masters, the people who keep the backlog and the flow. It was described as "for project
+  managers"; a product manager, who owns outcomes and metrics, pointed out that this is not her
+  job. The README, the guide, the package description and the reading's and the spirit's
+  instructions now say so, and the README says what it does not do yet: connect work to product
+  metrics.
+
 ## 0.11.1 — 2026-10-12
 
 - **Two clear buttons on the Claude tab.** **Read the board** copies the board and works out the

@@ -1,6 +1,6 @@
 # Contributing
 
-Hearthwood is young, and its most important input is not code. It is how project managers
+Hearthwood is young, and its most important input is not code. It is how people who look after a board
 actually judge a board. If you use it, your verdicts and criteria are the most useful thing you
 can share (`manager share`, read before you send).
 
