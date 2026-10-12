@@ -14,8 +14,10 @@ one. Commands about an analysis use the latest one unless you name another with
 | `manager connect jira-app --client-id <id> [--secret-stdin]` | Keeps the OAuth app hearthwood signs in to Jira with, once per home. See [Connecting](connecting.md#jira-cloud). |
 | `manager connect jira --board <name> [--site S] [--project KEY] [--board-id N] [--paste] [--again]` | Connects a Jira Cloud project through your own sign-in in the browser. `--again` signs an existing board in again. |
 | `manager connect markdown <folder> --board <name>` | Connects a folder of markdown tickets. |
+| `manager connect demo [--board demo]` | Connects the demo board that ships with hearthwood: twenty made-up tickets. |
 | `manager boards` | Lists the boards and when each was last read. |
 | `manager doctor` | Checks Python, the Claude Code CLI, the home, and every board's token, Jira sign-in or folder. |
+| `manager update` | Fetches the newest hearthwood from GitHub, when it was installed with uv. Your home is untouched. |
 
 ## Reading and analysing
 

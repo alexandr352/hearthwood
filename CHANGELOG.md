@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.1 — 2026-10-12
+
+- **Public, and installed from GitHub in one line:** `uv tool install
+  git+https://github.com/alexandr352/hearthwood`. No account, no token, no download to unpack.
+- **`manager update`** fetches the newest version with uv. Installed from a downloaded folder, it
+  says the one line that switches to the GitHub version; not installed with uv, it says how to.
+- **`manager connect demo`**: the demo board now ships inside the package, so it is there however
+  hearthwood was installed (its tickets moved from `examples/demo-board` to
+  `src/hearthwood/demo-board`).
+- [Start here](docs/start-here.md) follows: no GitHub account or invitation, the one-line install,
+  the demo by name, updates by `manager update`; the README's install says the same.
+
 ## 0.9.0 — 2026-10-12
 
 - **Jira Cloud.** `manager connect jira` reads a Jira project and its board through **your own

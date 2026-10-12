@@ -7,8 +7,8 @@ think. Your answers become your **criteria**, and every later reading follows th
 Hearthwood **reads only**. It never writes to your board. When it suggests a change, you
 approve or reject it, and it remembers which.
 
-**Not a developer? [Start here](docs/start-here.md):** a step-by-step guide, from the GitHub
-invitation to your Jira board on the page, with no programming.
+**Not a developer? [Start here](docs/start-here.md):** a step-by-step guide, from an empty
+laptop to your Jira board on the page, with no programming.
 
 ```
  your board ── read ──► snapshot ──► facts (plain code) ──► reading (Claude) ──► you
@@ -65,24 +65,18 @@ development tickets. Hearthwood looks after the board those tickets live on.
 
 ## Install
 
-The [start-here guide](docs/start-here.md) installs it with [uv](https://docs.astral.sh/uv/), which
-brings its own Python. By hand: you need Python 3.10 or newer, and the [Claude Code](https://claude.com/claude-code) CLI
-(`claude`), logged in.
+You need [uv](https://docs.astral.sh/uv/), which brings its own Python, and the
+[Claude Code](https://claude.com/claude-code) CLI (`claude`), logged in, for the reading and the
+spirit. The [start-here guide](docs/start-here.md) walks through all of it.
 
 ```sh
-python3 -m venv ~/.hearthwood-venv
-~/.hearthwood-venv/bin/pip install git+https://github.com/alexandr352/hearthwood
-echo 'export PATH="$HOME/.hearthwood-venv/bin:$PATH"' >> ~/.zshrc   # ~/.bashrc on bash
-source ~/.zshrc
+uv tool install git+https://github.com/alexandr352/hearthwood
 manager init
 manager doctor
 ```
 
-To update, run the `pip install` line again with `--upgrade`.
-
-While the repository is private, `pip` needs your access to it. Either use
-`git+ssh://git@github.com/alexandr352/hearthwood` if you have an SSH key on GitHub, or clone the
-repository and run `pip install /path/to/hearthwood`.
+To update: `manager update`. Without uv, any Python 3.10 or newer does:
+`pip install git+https://github.com/alexandr352/hearthwood`, and `--upgrade` to update.
 
 ## Try it on the demo board
 
@@ -91,8 +85,7 @@ work, a ticket blocked by work that was cancelled, a merged pull request on an o
 near-duplicates, and more.
 
 ```sh
-git clone https://github.com/alexandr352/hearthwood && cd hearthwood
-manager connect markdown examples/demo-board --board demo
+manager connect demo
 manager read
 manager analyze --facts-only     # the facts alone: no model call, no cost
 manager analyze                  # the facts, then one reading (about $0.10 with Sonnet)

@@ -61,7 +61,7 @@ def cmd_init(args):
     if not created:
         out("  (already set up)")
     out("\nnext: manager connect github --board <name> --repo <owner/repo>")
-    out("  or: manager connect markdown <folder> --board demo     (the demo board in examples/demo-board)")
+    out("  or: manager connect demo                               (a made-up board to try it on)")
     return 0
 
 
@@ -195,6 +195,56 @@ def cmd_connect_jira(args):
     out(f"  signed in; the sign-in is kept in {jira_auth.grant_path(b)}, readable by you alone")
     out(f"  settings: {b.dir / 'board.toml'}  (how your columns are used: check them once)")
     out("\nnext: manager read")
+    return 0
+
+
+def demo_folder():
+    """The demo board's tickets, shipped inside the package."""
+    from importlib import resources
+    return str(resources.files("hearthwood").joinpath("demo-board"))
+
+
+def cmd_connect_demo(args):
+    home.init_home()
+    b = home.add_board(args.board, "markdown", demo_folder())
+    out(f"board {b.name}: the demo board, twenty made-up tickets of an imaginary notes app")
+    out("\nnext: manager analyze --facts-only     (the facts alone; nothing leaves this machine)")
+    return 0
+
+
+def update_source():
+    """'git', 'directory' or '' : where uv installed hearthwood from, read from uv's own receipt."""
+    uv = shutil.which("uv")
+    if not uv:
+        return ""
+    p = subprocess.run([uv, "tool", "dir"], capture_output=True, text=True, timeout=30)
+    receipt = os.path.join(p.stdout.strip(), "hearthwood", "uv-receipt.toml")
+    try:
+        text = open(receipt, encoding="utf-8").read()
+    except OSError:
+        return ""
+    return "git" if "git = " in text else "directory" if ("directory = " in text or "path = " in text) else "other"
+
+
+GIT_SOURCE = "git+https://github.com/alexandr352/hearthwood"
+
+
+def cmd_update(args):
+    uv, source = shutil.which("uv"), update_source()
+    if not source:
+        return fail("hearthwood was not installed with uv here, so it cannot update itself. Install it that way once:\n"
+                    f"  uv tool install {GIT_SOURCE}")
+    if source == "directory":
+        out("hearthwood was installed from a downloaded folder, which does not change by itself. Switch to the")
+        out("version on GitHub once, and from then on `manager update` fetches the newest:")
+        out(f"  uv tool install --force {GIT_SOURCE}")
+        return 1
+    out(f"hearthwood {__version__}: looking for a newer version ...")
+    if subprocess.run([uv, "tool", "upgrade", "hearthwood"]).returncode != 0:
+        return fail("the update did not complete; what uv said is above")
+    m = shutil.which("manager")
+    now = subprocess.run([m, "--version"], capture_output=True, text=True).stdout.strip() if m else ""
+    out(f"now {now or 'updated'}. Your boards, verdicts and criteria are untouched.")
     return 0
 
 
@@ -556,7 +606,7 @@ def parser():
         return s
 
     cmd("init", cmd_init, "set up the home (~/.hearthwood)", board=False)
-    c = sub.add_parser("connect", help="connect a board: github, jira, markdown, or a new token for a board")
+    c = sub.add_parser("connect", help="connect a board: github, jira, markdown, the demo, or a new token for a board")
     cs = c.add_subparsers(dest="kind", metavar="<kind>")
     g = cs.add_parser("github", help="a GitHub repository's issues, and its Projects board when the token may read it")
     g.add_argument("--board", required=True, help="a short name for this board, e.g. web")
@@ -583,6 +633,9 @@ def parser():
     ja.add_argument("--client-id", required=True)
     ja.add_argument("--secret-stdin", action="store_true", help="read the client secret from standard input")
     ja.set_defaults(fn=cmd_connect_jira_app)
+    dm = cs.add_parser("demo", help="the demo board: twenty made-up tickets, to try hearthwood on")
+    dm.add_argument("--board", default="demo")
+    dm.set_defaults(fn=cmd_connect_demo)
     m = cs.add_parser("markdown", help="a folder of markdown tickets (the demo board's format)")
     m.add_argument("folder")
     m.add_argument("--board", required=True)
@@ -627,6 +680,7 @@ def parser():
     cmd("next", cmd_next, "the one next step", board=False)
     cmd("status", cmd_status, "where things stand", board=False)
     cmd("doctor", cmd_doctor, "check the setup", board=False)
+    cmd("update", cmd_update, "fetch the newest hearthwood from GitHub (when it was installed with uv)", board=False)
     return p
 
 

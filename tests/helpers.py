@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from hearthwood import home  # noqa: E402
 from hearthwood.model import Board, Item, PullRequest  # noqa: E402
 
-DEMO = ROOT / "examples" / "demo-board"
+DEMO = ROOT / "src" / "hearthwood" / "demo-board"
 FAKE = Path(__file__).resolve().parent / "fake_claude.py"
 
 

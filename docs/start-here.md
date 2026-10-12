@@ -7,20 +7,22 @@ written out in full here, and you can copy and paste it.
 At the end you will have hearthwood on your laptop, connected to your Jira project, and a page in
 your browser that shows what needs your attention.
 
-It takes about 20 minutes. Do it once; afterwards you only use the page.
+It takes about 20 minutes. Do it once; afterwards you only use the page, and an update is one
+command.
 
 ## What you need
 
 - **A Mac.** Linux works the same way. Windows is not tested yet (there are notes for it below).
-- **A GitHub account.** Free, at [github.com/signup](https://github.com/signup). Hearthwood is in a
-  private place on GitHub (a *private repository*), and you need an account to be let in.
-- **An invitation** to that repository, from the person who gave you this guide.
-- **Two short pieces of text from them:** an *app id* and an *app secret*. They are what lets
-  hearthwood ask Jira for your permission. Keep the secret to yourself, like a password.
+- **Two short pieces of text from whoever set hearthwood up for your team:** an *app id* and an
+  *app secret*. They are what lets hearthwood ask Jira for your permission. Keep the secret to
+  yourself, like a password.
 - **Your Jira**, the one you already use at work (Jira Cloud, an address ending in
   `.atlassian.net`).
 - **A Claude plan** (Pro or Max) for the part where Claude reads your board. Without it,
   everything else still works: the facts, the page, your verdicts.
+
+No GitHub account is needed: hearthwood is public, at
+[github.com/alexandr352/hearthwood](https://github.com/alexandr352/hearthwood).
 
 ## Words you will meet
 
@@ -28,38 +30,20 @@ It takes about 20 minutes. Do it once; afterwards you only use the page.
 | --- | --- |
 | **Terminal** | A window where you type commands. On a Mac: press Cmd+Space, type `Terminal`, press Enter. |
 | **command** | One line you paste into Terminal and run by pressing Enter. |
-| **repository** | The folder on GitHub where hearthwood's files live. Yours to download, not to share. |
-| **uv** | A small helper that installs hearthwood and the Python it needs, so you never deal with Python yourself. |
+| **uv** | A small helper that installs hearthwood, the Python it needs, and its updates, so you never deal with Python yourself. |
+| **git** | The tool that fetches hearthwood from GitHub. Your Mac installs it for you when it is first needed. |
 | **sign-in** | You allowing hearthwood to read your Jira, in your browser, the way you allow other apps. |
 | **app id and secret** | Hearthwood's own name and password at Atlassian. Not your password: hearthwood never sees that. |
 | **the home** | The folder `~/.hearthwood` on your laptop, where hearthwood keeps everything it reads and everything you tell it. |
 
-## 1. Accept the invitation
-
-GitHub sends you an email: *"… invited you to collaborate on hearthwood"*. Open it and press
-**View invitation**, then **Accept invitation**. If the email is not there, open
-github.com/alexandr352/hearthwood/invitations while signed in to GitHub.
-
-You can now open the repository page: github.com/alexandr352/hearthwood. Other people see
-"page not found" there; that is what private means.
-
-## 2. Download hearthwood
-
-On the repository page, press the green **Code** button, then **Download ZIP**.
-
-Your Mac puts it in **Downloads** and usually unpacks it for you into a folder called
-`hearthwood-main`. If you see only `hearthwood-main.zip`, double-click it.
-
-Leave the folder there. The commands below expect `~/Downloads/hearthwood-main`.
-
-## 3. Open Terminal
+## 1. Open Terminal
 
 Press **Cmd+Space**, type `Terminal`, press **Enter**. A window with a blinking cursor opens.
 
 How to run a command: copy the grey line, click into Terminal, paste it with **Cmd+V**, press
 **Enter**. Wait until the cursor comes back before the next one. Text that scrolls by is normal.
 
-## 4. Install uv (once)
+## 2. Install uv (once)
 
 ```sh
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -67,16 +51,18 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 When it finishes, **close Terminal and open it again**. That makes the next commands findable.
 
-## 5. Install hearthwood
+## 3. Install hearthwood
 
 ```sh
-uv tool install ~/Downloads/hearthwood-main
+uv tool install git+https://github.com/alexandr352/hearthwood
 ```
 
-uv downloads the Python it needs by itself. The last line says
-`Installed 1 executable: manager`. `manager` is the command you will use from now on.
+**If a window pops up** saying the `git` command needs the *command line developer tools*, press
+**Install**, wait until it is done (a few minutes), and run the same line again. That happens
+once.
 
-Check it:
+uv downloads the Python it needs by itself. The last line says
+`Installed 1 executable: manager`. `manager` is the command you will use from now on. Check it:
 
 ```sh
 manager --version
@@ -85,12 +71,12 @@ manager --version
 It answers `hearthwood` and a version number. If it says `command not found`, see
 [If something goes wrong](#if-something-goes-wrong).
 
-## 6. Try it on the demo board (two minutes, nothing leaves your laptop)
+## 4. Try it on the demo board (two minutes, nothing leaves your laptop)
 
-The download includes a made-up board with twenty tickets.
+Hearthwood comes with a made-up board of twenty tickets.
 
 ```sh
-manager connect markdown ~/Downloads/hearthwood-main/examples/demo-board --board demo
+manager connect demo
 manager analyze --facts-only
 manager ui
 ```
@@ -100,7 +86,7 @@ The last command opens a page in your browser. Look around: **Active** is what n
 
 To stop the page, go back to Terminal and press **Ctrl+C**.
 
-## 7. Install Claude Code (for the reading and the chat)
+## 5. Install Claude Code (for the reading and the chat)
 
 Hearthwood asks Claude to read your board once per analysis and to talk with you on the page. For
 that it uses Claude Code, signed in with your own Claude plan.
@@ -124,7 +110,7 @@ manager doctor
 
 Every line should start with `ok`.
 
-## 8. Connect your Jira
+## 6. Connect your Jira
 
 **First, the app (once).** Put in the app id you were given, in place of `PASTE-APP-ID`:
 
@@ -142,8 +128,9 @@ manager connect jira --board team
 ```
 
 Your browser opens Atlassian's page by itself. (If it does not, Terminal shows a long link that
-starts with `https://auth.atlassian.com/`: copy it into your browser.) Atlassian asks whether hearthwood may read your Jira. Choose your
-site and press **Accept**. The browser shows *"hearthwood is connected"*; close that tab.
+starts with `https://auth.atlassian.com/`: copy it into your browser.) Atlassian asks whether
+hearthwood may read your Jira. Choose your site and press **Accept**. The browser shows
+*"hearthwood is connected"*; close that tab.
 
 Back in Terminal it lists your projects and asks **Which project?** Type the number in front of
 yours and press Enter. It finds the project's board by itself.
@@ -151,7 +138,7 @@ yours and press Enter. It finds the project's board by itself.
 Hearthwood can only read. It cannot change a ticket, a comment or a column, and the permission
 you gave says so.
 
-## 9. Read your board and open the page
+## 7. Read your board and open the page
 
 ```sh
 manager read
@@ -180,27 +167,26 @@ Nothing on the page ever changes your board. Approving a proposal records your d
 
 ## Getting a new version
 
-When you are told there is a new version: delete the old `hearthwood-main` folder in Downloads,
-download the ZIP again (step 2), and run
-
 ```sh
-uv tool install --force ~/Downloads/hearthwood-main
+manager update
 ```
 
-Your boards, verdicts and criteria stay; they live in the home, not in the download.
+It fetches the newest hearthwood from GitHub. Your boards, verdicts and criteria stay; they live in
+the home, not in the program.
 
 ## If something goes wrong
 
 | what you see | what to do |
 | --- | --- |
 | `command not found: manager` or `uv` | Close Terminal and open it again. If it persists: `uv tool update-shell`, then reopen Terminal. |
-| `no such file or directory: …/Downloads/hearthwood-main` | The folder has another name or place. In Terminal type `uv tool install ` (with a space at the end), then drag the folder from Finder into the window, and press Enter. |
-| The Atlassian page says your **admin has disabled** user-installed apps | Your organization does not allow it. Tell the person who invited you; there is nothing to fix on your side. |
-| The Atlassian page says the app is **not available** or **not shared** | The app's sharing is not switched on yet. Tell the person who invited you. |
+| `git` not found, or the install stops with an error about git | Run `xcode-select --install`, press **Install** in the window that opens, wait, then run step 3 again. |
+| The Atlassian page says your **admin has disabled** user-installed apps | Your organization does not allow it. Tell whoever set hearthwood up; there is nothing to fix on your side. |
+| The Atlassian page says the app is **not available** or **not shared** | The app's sharing is not switched on yet. Tell whoever set hearthwood up. |
 | `cannot listen on 127.0.0.1:8768` | Something else uses that port, often an earlier `manager connect jira` still waiting. Close other Terminal windows, then try again. |
 | `the sign-in … was revoked or has expired` | Sign in again: `manager connect jira --board team --again` |
-| `Claude Code CLI: not found` in `manager doctor` | Step 7. Until then use `manager analyze --facts-only`. |
-| Anything else | Run `manager doctor` and send the person who invited you what it prints. It never prints a secret. |
+| `Claude Code CLI: not found` in `manager doctor` | Step 5. Until then use `manager analyze --facts-only`. |
+| `manager update` says it was installed from a downloaded folder | Run the line it shows once; from then on `manager update` works. |
+| Anything else | Run `manager doctor` and send what it prints to whoever set hearthwood up. It never prints a secret. |
 
 ## What stays on your laptop, and what does not
 
@@ -224,27 +210,26 @@ permission you gave.
 ## Windows (not tested yet)
 
 The same steps should work in **PowerShell** instead of Terminal, with these two lines instead of
-the ones in steps 4 and 7:
+the ones in steps 2 and 5:
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 irm https://claude.ai/install.ps1 | iex
 ```
 
-and `$HOME\Downloads\hearthwood-main` wherever this guide says `~/Downloads/hearthwood-main`. If
-something does not work, that is useful to know: tell the person who invited you.
+Git for Windows comes from [git-scm.com](https://git-scm.com/download/win). If something does not
+work, that is useful to know: tell whoever set hearthwood up.
 
 ---
 
-## For the person who invites
+## For whoever sets it up for a team
 
-Before you send this guide:
+Hearthwood signs in to Jira as a registered Atlassian app. One app serves the whole team; each
+person still signs in as themselves and sees only what they may see. Before you send this guide:
 
-1. **Invite them to the repository:** on GitHub, the repository's **Settings**, **Collaborators**,
-   **Add people**, their GitHub name or email. On a repository owned by a personal account every
-   collaborator can also push changes: GitHub has no read-only role there. Tell them they never
-   need to.
-2. **Switch on sharing for the Jira app:** at
+1. **Register the app** once, as [Connecting](connecting.md#jira-cloud) describes. It needs an
+   Atlassian account, not an administrator.
+2. **Switch on sharing for the app:** at
    [developer.atlassian.com/console/myapps](https://developer.atlassian.com/console/myapps), your
    app, **Distribution**, **Edit**, set it to **Sharing** and answer what Atlassian asks (a
    vendor name, a privacy policy link, and its questions about personal data: hearthwood keeps
@@ -252,4 +237,4 @@ Before you send this guide:
    sign in with the app.
 3. **Send the app id and secret privately**, for example in a password manager's shared item or
    a message that disappears. Not in a ticket, an email thread or a group chat.
-4. **Tell them which Jira project** to choose in step 8, if they have more than one.
+4. **Tell them which Jira project** to choose in step 6, if they have more than one.

@@ -102,7 +102,7 @@ A comment: a date, optionally who wrote it, and the text below.
 An optional `_board.md` names the columns in order: `columns: [Backlog, Todo, In Progress, In Review, Done]`.
 A ticket in a done column is closed unless it says `state: open`. A `## Comments` heading ends the
 description; each `### <date> [who]` under it starts one comment. The demo board in
-`examples/demo-board` uses this format.
+(`manager connect demo`, files in `src/hearthwood/demo-board`) uses this format.
 
 ## Jira Cloud
 
