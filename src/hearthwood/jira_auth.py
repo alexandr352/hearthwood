@@ -30,9 +30,11 @@ TOKEN_URL = "https://auth.atlassian.com/oauth/token"
 RESOURCES_URL = "https://api.atlassian.com/oauth/token/accessible-resources"
 PORT = 8768
 REDIRECT = f"http://localhost:{PORT}/callback"
-# Read only. offline_access brings the refresh token, so one sign-in lasts.
-SCOPES = ("read:jira-work", "read:board-scope:jira-software", "read:board-scope.admin:jira-software",
-          "read:sprint:jira-software", "read:epic:jira-software", "offline_access")
+# Read only. Jira Software's board endpoints take granular scopes only, and each also needs
+# read:project:jira beside its own. offline_access brings the refresh token, so one sign-in lasts.
+SCOPES = ("read:jira-work", "read:project:jira", "read:board-scope:jira-software",
+          "read:board-scope.admin:jira-software", "read:sprint:jira-software", "read:epic:jira-software",
+          "offline_access")
 
 
 class JiraAuthError(Exception):

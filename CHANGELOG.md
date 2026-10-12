@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.3 — 2026-10-12
+
+- **The Jira sign-in asks for `read:project:jira` too.** Jira Software's board endpoints take
+  granular scopes only, and each needs `read:project:jira` beside its own; without it the board
+  list answered "scope does not match". An app registered before this needs that scope added in
+  the Atlassian console (Permissions, Jira API, granular scopes), and each person allows it once
+  more at their next sign-in.
+- **A refused board no longer throws the sign-in away.** `manager connect jira` keeps the board and
+  the sign-in, says the columns will be statuses until the board can be read, and every `manager
+  read` tries the board again.
+
 ## 0.9.2 — 2026-10-12
 
 - **The computer's own certificates.** Hearthwood now trusts what the computer trusts (the Mac's

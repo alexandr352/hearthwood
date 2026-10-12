@@ -265,6 +265,7 @@ class Auth(unittest.TestCase):
         self.assertEqual((q["code_challenge"], q["code_challenge_method"]), ([challenge], ["S256"]))
         scopes = q["scope"][0].split()
         self.assertIn("offline_access", scopes)
+        self.assertIn("read:project:jira", scopes)              # the board endpoints need it beside their own
         self.assertFalse([s for s in scopes if s.startswith("write") or s.startswith("manage")])
 
     def test_a_pasted_address_must_answer_this_sign_in(self):
@@ -438,6 +439,24 @@ class Connect(unittest.TestCase):
                 jira_auth.urllib_transport = old
             self.assertNotEqual(code, 0)
             self.assertNotIn("auth.atlassian.com", text)
+
+    def test_a_refused_board_keeps_the_sign_in(self):
+        with TempHome() as t:
+            manager("connect", "jira-app", "--client-id", "CID", "--secret-stdin", stdin="SEC\n")
+            tok, api = Token(), FakeAtlassian([[]], board_status=401)
+            old = (jira_auth.urllib_transport, jira.urllib_transport, jira_auth.new_state)
+            jira_auth.urllib_transport, jira.urllib_transport = tok, api
+            jira_auth.new_state = lambda: "S1"
+            try:
+                code, text = manager("connect", "jira", "--board", "app", "--paste",
+                                     stdin="http://localhost:8768/callback?code=C1&state=S1\n")
+            finally:
+                jira_auth.urllib_transport, jira.urllib_transport, jira_auth.new_state = old
+            self.assertEqual(code, 0, text)
+            self.assertIn("scope does not match", text)
+            b = home.BoardHome("app", t.h)
+            self.assertEqual(b.settings["board_id"], 0)
+            self.assertTrue(jira_auth.grant_path(b).exists())
 
     def test_without_an_app_it_says_how_to_add_one(self):
         with TempHome():

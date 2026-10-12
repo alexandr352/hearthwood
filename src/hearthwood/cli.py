@@ -209,9 +209,12 @@ def cmd_connect_jira(args):
         found = client.get("/rest/api/3/project/search", {"maxResults": 100, "orderBy": "key"}).get("values") or []
         project = _choose("project", found, "", lambda p: f"{p.get('key')} ({p.get('name')})",
                           lambda p: [p.get("key", ""), p.get("name", "")], "--project")["key"]
-    board_id = int(args.board_id or 0)
+    board_id, board_note = int(args.board_id or 0), ""
     if not board_id:
-        boards = jira.find_board(client, project)
+        try:
+            boards = jira.find_board(client, project)
+        except jira.JiraError as e:            # the sign-in is kept: the board is tried again at every read
+            boards, board_note = [], str(e)
         if boards:
             board_id = boards[0][0]
             if len(boards) > 1:
@@ -222,6 +225,9 @@ def cmd_connect_jira(args):
     b = home.add_board(args.board, "jira", f"{site['url']} {project}", extra=extra)
     jira_auth.save_grant(b, grant)
     out(f"board {b.name}: Jira {site['url']}, project {project}" + (f", board #{board_id}" if board_id else ", no board"))
+    if board_note:
+        out(f"  the board could not be read ({board_note}). Until it can, each card's column is its status; "
+            "every `manager read` tries the board again.")
     out(f"  signed in; the sign-in is kept in {jira_auth.grant_path(b)}, readable by you alone")
     out(f"  settings: {b.dir / 'board.toml'}  (how your columns are used: check them once)")
     out("\nnext: manager read")

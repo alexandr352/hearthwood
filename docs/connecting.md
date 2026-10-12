@@ -132,9 +132,10 @@ secret. Registering one needs an Atlassian account, not an administrator:
 1. At [developer.atlassian.com/console/myapps](https://developer.atlassian.com/console/myapps),
    **Create**, then **OAuth 2.0 integration**. Name it, for example `hearthwood`.
 2. **Permissions**, **Jira API**, **Add**, then **Configure**. Add the classic scope
-   `read:jira-work`, and the granular scopes `read:board-scope:jira-software`,
+   `read:jira-work`, and the granular scopes `read:project:jira`, `read:board-scope:jira-software`,
    `read:board-scope.admin:jira-software`, `read:sprint:jira-software` and
-   `read:epic:jira-software`. Nothing that writes.
+   `read:epic:jira-software`. Nothing that writes. (Jira's board endpoints need `read:project:jira`
+   beside their own scope; without it the board cannot be read and columns fall back to statuses.)
 3. **Authorization**, **OAuth 2.0 (3LO)**: the callback URL is `http://localhost:8768/callback`.
 4. **Settings** shows the client id and the secret: `manager connect jira-app --client-id <id>`,
    then paste the secret when asked (it is not shown, and it is kept in the home, readable by you
