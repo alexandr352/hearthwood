@@ -98,8 +98,16 @@ manager ui
 The last command opens a page in your browser. Look around: **Active** is what needs attention,
 **All** is every card, **Stats** is the numbers. Click any card number to read the card.
 
-To stop the page, go back to Terminal and press **Ctrl+C**. When you no longer want the demo on
-your page: `manager disconnect demo`.
+To stop the page, go back to Terminal and press **Ctrl+C**.
+
+**Then remove the demo**, so that from now on your page shows only your own board:
+
+```sh
+manager disconnect demo
+```
+
+It says what it will remove and asks first: type `y` and press Enter. Only the made-up board goes;
+nothing else changes.
 
 ## 5. Install Claude Code (for the reading and the chat)
 
