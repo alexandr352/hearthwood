@@ -25,6 +25,16 @@ command.
 No GitHub account is needed: hearthwood is public, at
 [github.com/alexandr352/hearthwood](https://github.com/alexandr352/hearthwood).
 
+### Do I need Python?
+
+No. Hearthwood is written in Python, but you do not install Python yourself. In step 3, uv
+downloads a Python of its own (a current one) into its own folder and uses only that.
+
+Your Mac may already have a Python: one comes with Apple's developer tools, and is too old for
+hearthwood (3.9); one may have come from python.org years ago. uv ignores both, so they do not
+matter, and you do not need to remove or update them. Other programs that use them are not
+affected.
+
 ## Words you will meet
 
 | word | what it means here |
