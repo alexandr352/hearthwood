@@ -66,7 +66,7 @@ box-shadow:-4px 0 24px rgba(0,0,0,.18);transform:translateX(105%);transition:tra
 #panel .desc{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
 #panel .talk .desc{border-top:0;padding-top:4px;margin-top:0}#panel .talk{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 #panel .badge.new{margin-left:6px;color:var(--amber);border-color:var(--amber)}
-.runrow{display:flex;gap:12px;align-items:baseline;margin:8px 0}.runrow .act{white-space:nowrap}
+.runrow{display:grid;grid-template-columns:24ch 1fr;gap:14px;align-items:start;margin:10px 0}.runrow .act{width:100%;white-space:nowrap;text-align:center}@media (max-width:640px){.runrow{grid-template-columns:1fr;gap:6px}}
 .tools .viewswitch{margin:0 6px 0 0}.tools .viewswitch button{padding:4px 11px}
 .scope{display:inline-flex;flex-wrap:wrap;gap:6px;margin:6px 12px 10px 0;vertical-align:top}.scope button{font:13px var(--font);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:6px 14px;color:var(--mute);cursor:pointer}.scope button[aria-pressed=true]{color:var(--ink);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 #panel h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:16px 0 4px}
@@ -841,7 +841,7 @@ def claude_section(h, bs, ui):
         if ui:
             acts.append(f"<section class='card runbox' data-board=\"{E(b.name)}\"><b>{E(b.name)}</b>"
                         f"<div class=runrow><button type=button class=act data-run=facts>Read the board</button>"
-                        f"<span class='mute small'>{E(read_line)}</span></div>"
+                        f"<div class='mute small'>{E(read_line)}</div></div>"
                         f"<div class=runrow><button type=button class=act data-run=reading>Ask Claude to read it</button>"
                         f"<div class='mute small'>Claude reads the facts of the copy you have (it does not read the board "
                         f"again) and says what needs your attention. This is the one that costs. {''.join(lines)}</div></div>"
