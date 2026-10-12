@@ -36,9 +36,12 @@ def item_type(it, patterns):
 
 
 class Stats:
-    def __init__(self, board, settings, now=None):
+    def __init__(self, board, settings, now=None, universe=None):
+        """`board` holds the cards counted; `universe`, when given, the whole board they come from, so a
+        goal's sub-items outside the view are known rather than counted as missing."""
         self.board = board
         self.s = settings
+        self.universe = (universe or board).by_key()
         self.items = board.by_key()
         self.now = now or parse_ts(board.fetched_at)
         st = settings.get("stats", {})
@@ -113,11 +116,13 @@ class Stats:
 
     def goals(self):
         rows, empty = [], []
-        for g in self.board.items:
+        for g in self.universe.values():
             if not self.is_goal(g):
                 continue
             if g.state == "closed" and ((a := self.age(g.closed)) is None or a > 30):
                 continue
+            if g.key not in self.items and not any(k in self.items for k in g.children):
+                continue                               # neither the goal nor any of its cards is in view
             kids = [self.items[k] for k in g.children if k in self.items]
             if not g.children:
                 if g.state == "open":
@@ -125,9 +130,10 @@ class Stats:
                 continue
             done = sum(1 for k in kids if _done(k))
             open_ = sum(1 for k in kids if k.state == "open")
+            unknown = sum(1 for k in g.children if k not in self.universe)
             rows.append({"key": g.key, "title": g.title, "state": g.state, "column": g.column, "created": g.created[:10],
-                         "cards": len(g.children), "open": open_, "done": done,
-                         "unknown": len(g.children) - len(kids),
+                         "cards": len(kids) + unknown, "open": open_, "done": done,
+                         "unknown": unknown,
                          "progress": round(100 * done / (done + open_)) if done + open_ else None,
                          "added_30": sum(1 for k in kids if (a := self.age(k.created)) is not None and a <= 30),
                          "closed_30": sum(1 for k in kids if k.state == "closed" and (a := self.age(k.closed)) is not None and a <= 30),

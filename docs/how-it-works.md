@@ -211,30 +211,27 @@ the embedded cards are escaped so that no card can close the element that holds 
 the authors of comments are not on the page unless the board has `people = true`, and anyone on
 the board named in a description or a comment reads "someone".
 
-### Three tabs
+### Four tabs, and the view
 
-The page has three tabs; the one you last chose comes back, and `log.html#tab=stats` opens one directly.
+The page has four tabs; the one you last chose comes back, and `log.html#tab=stats` opens one directly.
 
-- **Active**: what is above. The next step, the reading, the questions, the proposals, the findings.
-  On a board with a running sprint (Jira), a switch at the top chooses **This sprint** or
-  **Everything**. This sprint is the default: it shows only what concerns the running sprint's
-  cards (finished ones included), and the ready list narrows the same way. The facts are the same
-  either way; only what is shown changes, and the choice is remembered.
-  A second switch, **Last 60 days | All time** (on every board; `recent_days` in board.toml), keeps
-  findings and ready cards about cards touched recently, and is on by default. Findings about
-  recent cards always come first; the heading says how many are recent and how many older. The
-  reading's own points are always shown.
-  A filter narrows them as you type: a line stays when its own words match, or the number, title,
-  type or label of a card it names; the ready list keeps the cards that match; it says how many of
-  how many are shown.
-- **All**: every card on the board, grouped by column in the board's order, closed cards folded at
+**The view** is chosen in the top row and applies to every tab: **Last 60 days | All time**
+(`recent_days` in board.toml) and, on a board with a running sprint, **This sprint | Everything**.
+Last 60 days and This sprint are the defaults; the choice is remembered. Each combination is
+computed when the page is built, so switching is instant and nothing is estimated in the browser.
+"Open, last 60 days" means open cards touched in the last 60 days.
+
+- **Active**: the next step, the totals, the reading, the questions, the proposals, the findings,
+  all for the cards in view. Findings about recently touched cards always come first, and the
+  heading says how many are recent and how many older; the reading's own points are always shown.
+- **All**: every card in view, grouped by column in the board's order, closed cards folded at
   the end. On a board with sprints it groups **by sprint** instead (a switch goes back to columns):
   the running sprint first and open; then the coming ones, newest first; then the parking sprints
   (no start date, or one long gone by), the most recently worked-on first; then cards in no
   sprint; then the closed sprints, newest first. Each is folded, with its cards counted by column
   and its dates. Inside a group, cards are in the board's rank order. A filter narrows it by number, title, type or label as you type, and every row opens the
   card in the panel.
-- **Stats**: the numbers of the board, counted by plain code from the snapshot, with no model:
+- **Stats**: the numbers of the cards in view, counted by plain code from the snapshot, with no model:
   - open, how many wait and in which columns, created against closed in the last 14 days, open
     cards under no goal, and what is in progress and in review now;
   - created, done and not planned per week for six weeks, as a chart with a table view;
@@ -248,6 +245,11 @@ The page has three tabs; the one you last chose comes back, and `log.html#tab=st
   back is marked as short rather than shown as whole. A *type* is the tracker's issue type, or the
   first label matching `[stats] type_labels`; a *goal* is a card with sub-items, or one labelled
   with `[stats] goal_labels`, so a goal with nothing under it yet still counts.
+- **Claude**: everything that involves Claude. The models of the reading and of the spirit (Opus or
+  Sonnet, written to `config.toml`; also `manager model reading sonnet`), **Read the board and run
+  the facts** (no model, no cost) and **Run a reading** (one Claude session), each in the background,
+  one at a time, the page refreshing itself when it is done; and every model call with its cost.
+  The static page shows the commands instead of the buttons.
 
 ### The spirit on the page
 

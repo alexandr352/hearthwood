@@ -94,6 +94,17 @@ class Disconnect(unittest.TestCase):
             self.assertNotEqual(manager("disconnect", "nope", "--yes")[0], 0)
 
 
+class Model(unittest.TestCase):
+    def test_set_and_show_the_model(self):
+        with TempHome() as t:
+            self.assertEqual(manager("model", "reading", "sonnet")[0], 0)
+            self.assertEqual(manager("model", "spirit", "opus")[0], 0)
+            cfg = home.config(t.h)
+            self.assertEqual((cfg["models"]["analyst"], cfg["models"]["spirit"]), ("sonnet", "opus"))
+            self.assertIn("reading: sonnet", manager("model")[1])
+            self.assertIn("[reading]", (t.h / "config.toml").read_text())       # the rest of the file is kept
+
+
 class Demo(unittest.TestCase):
     def test_the_demo_ships_inside_the_package(self):
         with TempHome() as t:

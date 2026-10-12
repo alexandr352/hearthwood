@@ -123,6 +123,18 @@ class Page(unittest.TestCase):
         self.assertIn("Open it with manager ui to read every card whole.", page)
         self.assertIn("if(window.hwCard&&!c.unread)", page)
 
+    def test_the_claude_tab_on_the_static_page_shows_commands(self):
+        page = self.build()
+        self.assertIn("data-tab=claude", page)
+        self.assertIn("manager model reading opus|sonnet", page)
+        self.assertIn("manager analyze --read -b demo", page)
+        self.assertNotIn("href=#calls", page)                       # no top-row button that goes nowhere
+        self.assertNotIn("class=runbox", page)
+
+    def test_links_to_the_tracker_open_in_a_new_tab(self):
+        page = self.build()
+        self.assertEqual(page.count("a.target='_blank'"), 2)
+
     def test_the_page_says_what_to_do_next(self):
         page = self.build()
         self.assertIn("<span class=nlabel>next</span><code>manager review -b demo</code>", page)

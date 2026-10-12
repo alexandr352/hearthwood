@@ -327,6 +327,20 @@ def count(n, word, plural=None):
     return f"{n} {word if n == 1 else plural or word + 's'}"
 
 
+def cmd_model(args):
+    h = home.home_dir()
+    cfg = home.config(h)
+    if not args.role:
+        out(f"reading: {cfg['models']['analyst']}    spirit: {cfg['models']['spirit']}")
+        return 0
+    if not args.model:
+        return fail("say which model: manager model reading opus|sonnet")
+    home.set_model(h, args.role, args.model)
+    out(f"{args.role}: {args.model} (in {h / 'config.toml'})")
+    rebuild_log()
+    return 0
+
+
 def cmd_boards(args):
     bs = home.boards()
     if not bs:
@@ -709,6 +723,9 @@ def parser():
     m.add_argument("--board", required=True)
     m.set_defaults(fn=cmd_connect_markdown)
     cmd("boards", cmd_boards, "list the connected boards", board=False)
+    mo = cmd("model", cmd_model, "show or set the model of the reading or the spirit", board=False)
+    mo.add_argument("role", nargs="?", choices=("reading", "spirit"))
+    mo.add_argument("model", nargs="?", choices=home.MODELS)
     dc = sub.add_parser("disconnect", help="remove a board from this computer (its copies and its sign-in); the board itself is untouched")
     dc.add_argument("board", help="the board's name, as `manager boards` lists it")
     dc.add_argument("--yes", action="store_true", help="do not ask first")

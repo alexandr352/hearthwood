@@ -161,6 +161,39 @@ def config(h=None):
         return base
 
 
+MODEL_ROLES = {"reading": "analyst", "spirit": "spirit"}
+MODELS = ("opus", "sonnet")
+
+
+def set_model(h, role, model):
+    """Write `[models] <analyst|spirit> = "<model>"` into config.toml, keeping every other line as it is."""
+    key = MODEL_ROLES.get(role)
+    if not key:
+        raise ValueError(f"a model is set for the reading or the spirit, not {role!r}")
+    if model not in MODELS:
+        raise ValueError(f"the model is one of {', '.join(MODELS)}")
+    p = h / "config.toml"
+    lines = p.read_text(encoding="utf-8").splitlines() if p.exists() else []
+    out, section, done = [], None, False
+    for line in lines:
+        s = line.strip()
+        if s.startswith("[") and s.endswith("]"):
+            if section == "models" and not done:
+                out.append(f'{key} = "{model}"')
+                done = True
+            section = s[1:-1].strip()
+        elif section == "models" and re.match(rf"^{key}\s*=", s):
+            comment = line[line.index("#"):] if "#" in line else ""
+            line = f'{key} = "{model}"' + (f"{' ' * max(1, 31 - len(key) - len(model))}{comment}" if comment else "")
+            done = True
+        out.append(line)
+    if not done:
+        if section != "models":
+            out += ["", "[models]"]
+        out.append(f'{key} = "{model}"')
+    p.write_text("\n".join(out) + "\n", encoding="utf-8")
+
+
 class BoardHome:
     """One board's folder and its settings."""
 

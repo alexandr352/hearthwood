@@ -21,7 +21,7 @@ CSS = """
 :root{--font:"Adwaita Mono",ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;--bg:#f6f4ee;--panel:#fff;--ink:#22231f;--mute:#6b6c62;--line:#e1ddd2;--green:#2f7d4f;--amber:#b47b10;--red:#b8412d;--accent:#55743a;--chip:#eef0e6;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#151613;--panel:#1e201b;--ink:#e9e8e0;--mute:#9a9b8f;--line:#33352e;--green:#58b07c;--amber:#d9a441;--red:#e0654e;--accent:#93b76c;--chip:#2a2d25;--s1:#3987e5;--s2:#d95926;--s3:#199e70}}
 :root[data-theme=dark]{--bg:#151613;--panel:#1e201b;--ink:#e9e8e0;--mute:#9a9b8f;--line:#33352e;--green:#58b07c;--amber:#d9a441;--red:#e0654e;--accent:#93b76c;--chip:#2a2d25;--s1:#3987e5;--s2:#d95926;--s3:#199e70}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);transition:padding-right .18s ease}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);transition:padding-right .18s ease}
 main{max-width:980px;margin:0 auto;padding:24px 16px 64px}
 .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
 h1{font-size:22px;margin:0}h1 span{color:var(--accent)}h1 small{color:var(--mute);font-weight:400;font-size:13px;margin-left:8px}
@@ -66,6 +66,7 @@ box-shadow:-4px 0 24px rgba(0,0,0,.18);transform:translateX(105%);transition:tra
 #panel .desc{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
 #panel .talk .desc{border-top:0;padding-top:4px;margin-top:0}#panel .talk{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 #panel .badge.new{margin-left:6px;color:var(--amber);border-color:var(--amber)}
+.tools .viewswitch{margin:0 6px 0 0}.tools .viewswitch button{padding:4px 11px}
 .scope{display:inline-flex;flex-wrap:wrap;gap:6px;margin:6px 12px 10px 0;vertical-align:top}.scope button{font:13px var(--font);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:6px 14px;color:var(--mute);cursor:pointer}.scope button[aria-pressed=true]{color:var(--ink);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 #panel h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:16px 0 4px}
 .tabs{display:flex;align-items:baseline;gap:4px;margin:14px 0 4px;border-bottom:1px solid var(--line)}
@@ -156,7 +157,7 @@ function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board
     row(dl,'blocking',c.blocking&&c.blocking.length?keys(b,c.blocking):null);
     if(c.prs&&c.prs.length){var ps=el('span');c.prs.forEach(function(p,i){if(i)ps.appendChild(txt(', '));
       var t=(p.number?'#'+p.number+' ':'')+p.state+(p.draft?' (draft)':'');
-      if(/^https?:\/\//.test(p.url||'')){var a=el('a',null,t);a.href=p.url;a.rel='noopener';ps.appendChild(a)}else ps.appendChild(txt(t))});row(dl,'pull requests',ps)}
+      if(/^https?:\/\//.test(p.url||'')){var a=el('a',null,t);a.href=p.url;a.rel='noopener noreferrer';a.target='_blank';ps.appendChild(a)}else ps.appendChild(txt(t))});row(dl,'pull requests',ps)}
     if(c.assignees)row(dl,'assignees',c.assignees.join(', ')||'-');
     row(dl,'sprint',c.sprint||null);row(dl,'priority',c.priority||null);
     row(dl,'milestone',c.milestone||null);
@@ -174,7 +175,7 @@ function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board
         if(m.new)t.firstChild.appendChild(el('span','badge new','new since your decision'));
         t.appendChild(linked(b,(m.body||'').trim()||'(empty)'));P.appendChild(t)})}}
   if(/^https?:\/\//.test(c.url||'')){var a=el('a',null,/^https:\/\/github\.com\//.test(c.url)?'Open on GitHub':'Open in the tracker');
-    a.href=c.url;a.rel='noopener';var pp=el('p','small');pp.appendChild(a);P.appendChild(pp)}
+    a.href=c.url;a.rel='noopener noreferrer';a.target='_blank';var pp=el('p','small');pp.appendChild(a);P.appendChild(pp)}
   if(document.getElementById('chat')){var ask=el('button','ask','Discuss this card with Spirit');ask.type='button';
     ask.dataset.ask='card';ask.dataset.board=b;ask.dataset.key=k;P.appendChild(ask)}
   P.classList.add('open');document.body.classList.add('panel-open');P.setAttribute('aria-hidden','false');P.scrollTop=0;x.focus()}
@@ -188,7 +189,7 @@ window.hwLink=function(node){var w=document.createTreeWalker(node,NodeFilter.SHO
       frag=frag||document.createDocumentFragment();if(m.index>at)frag.appendChild(txt(text.slice(at,m.index)));
       var kb=el('button','key',m[0]);kb.type='button';kb.dataset.key=m[0];kb.dataset.board=bd;frag.appendChild(kb);at=m.index+m[0].length}
     if(frag){if(at<text.length)frag.appendChild(txt(text.slice(at)));tn.parentNode.replaceChild(frag,tn)}})};
-var TABS=['active','all','stats'];
+var TABS=['active','all','stats','claude'];
 function setTab(t){if(TABS.indexOf(t)<0)t='active';document.querySelectorAll('.view').forEach(function(v){v.hidden=v.dataset.view!==t});
   document.querySelectorAll('[role=tab]').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.tab===t))});
   try{localStorage.setItem('hearthwood-tab',t)}catch(e){}}
@@ -206,7 +207,7 @@ function allList(sec){var box=sec.querySelector('.allist'),b=sec.dataset.board,c
   function num(k){var m=/(\d+)$/.exec(k);return m?+m[1]:0}
   function order(a,c){var ra=typeof a.rank==='number',rc=typeof c.rank==='number';
     if(ra&&rc)return a.rank-c.rank;if(ra!==rc)return ra?-1:1;return num(a.key)-num(c.key)}
-  function row(c){var r=el('div','arow');r.dataset.text=(c.key+' '+(c.title||'')+' '+(c.type||'')+' '+(c.labels||[]).join(' ')+' '+(c.sprint||'')).toLowerCase();
+  function row(c){var r=el('div','arow');r.dataset.key=c.key;r.dataset.text=(c.key+' '+(c.title||'')+' '+(c.type||'')+' '+(c.labels||[]).join(' ')+' '+(c.sprint||'')).toLowerCase();
     r.appendChild(key(b,c.key));r.appendChild(el('span','atitle',c.title||''));
     if(c.type)r.appendChild(el('span','chip',c.type));
     (c.labels||[]).filter(function(l){return l!==c.type}).slice(0,3).forEach(function(l){r.appendChild(el('span','chip',l))});
@@ -237,30 +238,43 @@ function allList(sec){var box=sec.querySelector('.allist'),b=sec.dataset.board,c
         else(g[c.column||'(no column)']=g[c.column||'(no column)']||[]).push(c)});
       var order_=cols.slice();Object.keys(g).forEach(function(x){if(order_.indexOf(x)<0)order_.push(x)});
       order_.forEach(function(x){group(x,g[x]||[],false,null)});group('closed',cl,true,null)}
-    if(f&&f.value)f.dispatchEvent(new Event('input'))}
+    if(typeof refilter==='function')refilter()}
   if(sw){var v=null;try{v=localStorage.getItem(K)}catch(e){}by=v==='column'?'column':'sprint';
     function mark(){sw.querySelectorAll('[data-group]').forEach(function(x){x.setAttribute('aria-pressed',String(x.dataset.group===by))})}
     mark();sw.addEventListener('click',function(e){var x=e.target.closest('[data-group]');if(!x)return;by=x.dataset.group;mark();
       try{localStorage.setItem(K,by)}catch(y){}draw()})}
   draw();
-  if(f)f.addEventListener('input',function(){var q=f.value.trim().toLowerCase();
-    box.querySelectorAll('.agroup').forEach(function(g){var shown=0;g.querySelectorAll('.arow').forEach(function(r){
-      var on=!q||r.dataset.text.indexOf(q)>=0;r.hidden=!on;if(on)shown++});g.hidden=!shown;
-      g.querySelector('.count').textContent=q?shown+' of '+g.querySelectorAll('.arow').length:String(g.querySelectorAll('.arow').length);
-      if(q&&shown)g.open=true})})}
-document.querySelectorAll('[data-view=all] section[data-board]').forEach(allList);
+  function refilter(){var q=f?f.value.trim().toLowerCase():'';
+    box.querySelectorAll('.agroup').forEach(function(g){var shown=0,rows=g.querySelectorAll('.arow');rows.forEach(function(r){
+      var on=(!q||r.dataset.text.indexOf(q)>=0)&&inView(b,r.dataset.key);r.hidden=!on;if(on)shown++});g.hidden=!shown;
+      g.querySelector('.count').textContent=shown===rows.length?String(rows.length):shown+' of '+rows.length;
+      if(q&&shown)g.open=true})}
+  if(f)f.addEventListener('input',refilter);onView.push(refilter);refilter()}
+var VIEW={time:'recent',scope:'sprint'},META={};
+document.querySelectorAll('script.boardmeta').forEach(function(s){try{var m=JSON.parse(s.textContent);
+  META[s.dataset.board]={sprint:m.sprint&&m.sprint.length?new Set(m.sprint):null,recent:new Set(m.recent||[])}}catch(e){}});
+try{VIEW.time=localStorage.getItem('hearthwood-time')==='all'?'all':'recent';VIEW.scope=localStorage.getItem('hearthwood-scope')==='all'?'all':'sprint'}catch(e){}
+function inView(b,k){var m=META[b];if(!m)return true;
+  if(VIEW.scope==='sprint'&&m.sprint&&!m.sprint.has(k))return false;if(VIEW.time==='recent'&&!m.recent.has(k))return false;return true}
+function variantOf(b){var m=META[b];return((VIEW.scope==='sprint'&&m&&m.sprint)?'sprint':'all')+'-'+VIEW.time}
+var onView=[];
+function applyView(){document.querySelectorAll('.viewswitch').forEach(function(sw){var v=VIEW[sw.dataset.switch];
+    sw.querySelectorAll('button[data-on]').forEach(function(x){x.setAttribute('aria-pressed',String(x.dataset.on===v))})});
+  document.querySelectorAll('section[data-board]').forEach(function(sec){var v=variantOf(sec.dataset.board);
+    sec.querySelectorAll('[data-variant]').forEach(function(x){x.hidden=x.dataset.variant!==v});
+    sec.querySelectorAll('[data-scope-only]').forEach(function(x){x.hidden=v.indexOf(x.dataset.scopeOnly+'-')!==0})});
+  onView.forEach(function(fn){fn()})}
+document.querySelectorAll('.viewswitch').forEach(function(sw){sw.addEventListener('click',function(e){var x=e.target.closest('button[data-on]');
+  if(!x)return;VIEW[sw.dataset.switch]=x.dataset.on;try{localStorage.setItem('hearthwood-'+sw.dataset.switch,x.dataset.on)}catch(y){}applyView()})});
 (function(){var f=document.getElementById('activefilter'),cnt=document.getElementById('activecount');if(!f)return;
-  var inSprint={};document.querySelectorAll('script.insprint').forEach(function(s){try{inSprint[s.dataset.board]=new Set(JSON.parse(s.textContent))}catch(e){}});
   function about(b,k){var c=card(b,k);return ' '+k+(c?' '+(c.title||'')+' '+(c.type||'')+' '+(c.labels||[]).join(' ')+' '+(c.sprint||''):'')}
   function words(sec,n){var t='',w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT),x;
     while((x=w.nextNode()))if(!x.parentNode.closest('.acts,.cmdhint'))t+=' '+x.nodeValue;
     n.querySelectorAll('button.key').forEach(function(k){t+=about(k.dataset.board||sec.dataset.board,k.dataset.key)});return t.toLowerCase()}
   function apply(){var q=f.value.trim().toLowerCase(),shown=0,all=0,narrowed=false;
-    document.querySelectorAll('[data-view=active] section[data-board]').forEach(function(sec){var head=null,first=true,seen=false;
-      var sw=sec.querySelector('.sprintscope'),set=sw&&sw.dataset.on!=='all'?inSprint[sec.dataset.board]||null:null;
-      var tw=sec.querySelector('.timescope'),recentOnly=!!tw&&tw.dataset.on!=='all',variant=(set?'sprint':'all')+'-'+(recentOnly?'recent':'all');
+    document.querySelectorAll('[data-view=active] section[data-board]').forEach(function(sec){var head=null,first=true,seen=false,b=sec.dataset.board;
+      var m=META[b]||{},set=VIEW.scope==='sprint'?m.sprint:null,recentOnly=VIEW.time==='recent',variant=variantOf(b);
       if(set||recentOnly)narrowed=true;
-      sec.querySelectorAll('[data-variant]').forEach(function(x){x.hidden=x.dataset.variant!==variant});
       function close(){if(head)head.hidden=(!!q||narrowed)&&!seen}
       [].slice.call(sec.children).forEach(function(n){
         if(n.tagName==='H2'){if(first){first=false;return}close();head=n;seen=false;return}
@@ -268,22 +282,16 @@ document.querySelectorAll('[data-view=all] section[data-board]').forEach(allList
         if(n.dataset.variant&&n.dataset.variant!==variant)return;
         all++;var on;
         if(n.classList.contains('readylist')){var any=!n.querySelector('button.key')&&!q;n.querySelectorAll('button.key').forEach(function(k){
-            var hit=!q||about(sec.dataset.board,k.dataset.key).toLowerCase().indexOf(q)>=0;k.hidden=!hit;if(hit)any=true});on=any}
+            var hit=!q||about(b,k.dataset.key).toLowerCase().indexOf(q)>=0;k.hidden=!hit;if(hit)any=true});on=any}
         else{var keys=[].map.call(n.querySelectorAll('button.key'),function(k){return k.dataset.key});
           var inside=!set||n.classList.contains('summary')||!keys.length||keys.some(function(k){return set.has(k)});
           var fresh=!recentOnly||!n.classList.contains('older');
           on=inside&&fresh&&(!q||words(sec,n).indexOf(q)>=0)}
         n.hidden=!on;if(on){shown++;seen=true}});close()});
     cnt.hidden=!(q||narrowed);cnt.textContent=shown+' of '+all+' shown'}
-  f.addEventListener('input',apply);
-  function wire(sw,attr,dflt){var k='hearthwood-'+attr+'-'+sw.dataset.board,v=null;try{v=localStorage.getItem(k)}catch(e){}
-    function to(val){sw.dataset.on=val;sw.querySelectorAll('button[data-'+attr+']').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset[attr]===val))})}
-    sw.addEventListener('click',function(e){var b=e.target.closest('button[data-'+attr+']');if(!b)return;to(b.dataset[attr]);
-      try{localStorage.setItem(k,b.dataset[attr])}catch(x){}apply()});
-    to(v==='all'?'all':dflt)}
-  document.querySelectorAll('.sprintscope').forEach(function(sw){wire(sw,'scope','sprint')});
-  document.querySelectorAll('.timescope').forEach(function(sw){wire(sw,'time','recent')});
-  apply()})();
+  f.addEventListener('input',apply);onView.push(apply)})();
+document.querySelectorAll('[data-view=all] section[data-board]').forEach(allList);
+applyView();
 var TIP=document.getElementById('tip');
 function tipAt(t,x,y){TIP.textContent=t.dataset.tip;TIP.hidden=false;var w=TIP.offsetWidth;
   TIP.style.left=Math.max(8,Math.min(innerWidth-w-8,x-w/2))+'px';TIP.style.top=Math.max(8,y-44)+'px'}
@@ -415,6 +423,40 @@ def full_card(h, board, key):
                      b.settings.get("stats", {}).get("type_labels", []), criteria.last_decided(h, b.name), stubs=False)[key]
 
 
+def _views(items, recent, inside):
+    """(variant, the card keys in view) for each view the page offers: this sprint or everything, the last
+    days or all time. A board without a running sprint has only the two 'all-' views."""
+    everything = set(items)
+    out = []
+    for scope in (["sprint", "all"] if inside else ["all"]):
+        for time in ("recent", "all"):
+            keep = (inside if scope == "sprint" else everything) & (recent if time == "recent" else everything)
+            out.append((f"{scope}-{time}", keep))
+    return out
+
+
+def _tiles(items, facts, keep, by_rule):
+    """The totals row for the cards in `keep`, counted the way the facts count them."""
+    import statistics
+    from .facts import parse_ts, days_between
+    now = parse_ts(facts["fetched_at"])
+    def touches(f):
+        return bool(keep.intersection(f["keys"]))
+    done = [items[k] for k in keep if items[k].get("state") == "closed" and items[k].get("close_reason") not in ("not_planned", "duplicate")]
+    def within(it, n):
+        t = parse_ts(it.get("closed") or "")
+        return bool(t and now and days_between(t, now) <= n)
+    closed_30 = [it for it in done if within(it, 30)]
+    cycle = [days_between(a, c) for it in closed_30 if (a := parse_ts(it.get("created") or "")) and (c := parse_ts(it.get("closed") or ""))]
+    stale = sum(1 for f in by_rule.get("stale", []) if touches(f)) + sum(len(keep.intersection(f["keys"])) for f in by_rule.get("long-untouched", []))
+    return [("open", sum(1 for k in keep if items[k].get("state") == "open")),
+            ("ready", sum(1 for k in facts["ready"] if k in keep)),
+            ("blocked", sum(1 for f in by_rule.get("blocked", []) + by_rule.get("blocked-by-parked", []) if touches(f))),
+            ("not moving", stale), ("finished, 7 days", sum(1 for it in done if within(it, 7))),
+            ("finished, 30 days", len(closed_30)),
+            ("median days to finish", round(statistics.median(cycle), 1) if cycle else "-")]
+
+
 def _recent_keys(items, fetched_at, days):
     """The cards updated within `days` of the read."""
     from .facts import parse_ts, days_between
@@ -481,29 +523,23 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
     by_rule = {}
     for f in facts["findings"]:
         by_rule.setdefault(f["rule"], []).append(f)
-    blocked = len(by_rule.get("blocked", [])) + len(by_rule.get("blocked-by-parked", []))
-    tiles = [("open", flow["open"]), ("ready", len(facts["ready"])), ("blocked", blocked),
-             ("not moving", len(by_rule.get("stale", []))), ("finished, 7 days", flow["finished_last_7_days"]),
-             ("finished, 30 days", flow["finished_last_30_days"]),
-             ("median days to finish", flow["median_days_open_to_finished_30d"] if flow["median_days_open_to_finished_30d"] is not None else "-")]
-    parts.append("<div class=tiles>" + "".join(f"<div class=tile><b>{E(str(v))}</b><span class='mute small'>{E(k)}</span></div>"
-                                                for k, v in tiles) + "</div>")
-    parts.append(f"<p class='mute small'>Analysis {E(d.name)} of the read {E(facts['fetched_at'])}. "
-                 + " ".join(E(n) for n in facts.get("notes", [])) + "</p>")
     sp = facts.get("sprint") or {}
     days = int(b.settings["rules"].get("recent_days", 60))
     recent = _recent_keys(items, facts["fetched_at"], days)
-    parts.append(f"<div class='scope timescope' data-board=\"{E(b.name)}\" role=group aria-label='How far back'>"
-                 f"<button type=button data-time=recent aria-pressed=true>Last {days} days</button>"
-                 "<button type=button data-time=all aria-pressed=false>All time</button></div>")
-    if sp.get("keys"):
+    inside = set(sp.get("keys") or [])
+    for v, keep in _views(items, recent, inside):
+        tiles = _tiles(items, facts, keep, by_rule)
+        parts.append(f"<div class=tiles data-variant={v}>" + "".join(
+            f"<div class=tile><b>{E(str(val))}</b><span class='mute small'>{E(k)}</span></div>" for k, val in tiles) + "</div>")
+    if inside:
         names = " + ".join(s["name"] for s in sp["active"])
         ends = ", ".join(s["end"][:10] for s in sp["active"] if s.get("end"))
-        parts.append(f"<div class='scope sprintscope' data-board=\"{E(b.name)}\" role=group aria-label='What to show'>"
-                     f"<button type=button data-scope=sprint aria-pressed=true>This sprint <span class=mute>{E(names)}"
-                     + (f", ends {E(ends)}" if ends else "") + f" · {len(sp['keys'])} cards</span></button>"
-                     "<button type=button data-scope=all aria-pressed=false>Everything</button></div>"
-                     f"<script type=application/json class=insprint data-board=\"{E(b.name)}\">{embed(sp['keys'])}</script>")
+        parts.append(f"<p class='mute small' data-scope-only=sprint>This sprint: {E(names)}" + (f", ends {E(ends)}" if ends else "")
+                     + f" · {len(inside)} cards.</p>")
+    parts.append(f"<p class='mute small'>Analysis {E(d.name)} of the read {E(facts['fetched_at'])}. "
+                 + " ".join(E(n) for n in facts.get("notes", [])) + "</p>")
+    parts.append(f"<script type=application/json class=boardmeta data-board=\"{E(b.name)}\">"
+                 + embed({"sprint": sorted(inside), "recent": sorted(recent), "days": days}) + "</script>")
     r = reading.load(d)
     verdicts = {}
     for v in criteria.all_verdicts(h, b.name):
@@ -662,16 +698,40 @@ def stats_section(b):
         return [head, "<p class=mute>Not read yet: <code>manager read</code>.</p>"], set()
     data = json.loads(snap.read_text(encoding="utf-8"))
     items = {i["key"]: i for i in data["items"]}
-    st = stats.Stats(Board.from_dict(data), b.settings).to_dict()
-    ref = set()
+    whole = Board.from_dict(data)
+    days = int(b.settings["rules"].get("recent_days", 60))
+    recent = _recent_keys(items, data["fetched_at"], days)
+    d = b.latest_analysis()
+    inside = set()
+    try:
+        inside = set(json.loads((d / "facts.json").read_text(encoding="utf-8")).get("sprint", {}).get("keys") or []) if d else set()
+    except (OSError, ValueError):
+        pass
+    ref, parts = set(), [head]
+    for v, keep in _views(items, recent, inside):
+        view = Board(name=whole.name, source=whole.source, where=whole.where, fetched_at=whole.fetched_at,
+                     columns=whole.columns, items=[it for it in whole.items if it.key in keep], notes=whole.notes,
+                     prs_read=whole.prs_read)
+        st = stats.Stats(view, b.settings, universe=whole).to_dict()
+        scope, time = v.split("-")
+        what = (("the cards of the running sprint" if scope == "sprint" else "every card in this read")
+                + (f" touched in the last {days} days" if time == "recent" else ""))
+        parts.append(f"<div data-variant={v}>")
+        parts += _stats_parts(st, items, ref, what)
+        parts.append("</div>")
+    return parts, ref
+
+
+def _stats_parts(st, items, ref, what):
+    """The Stats tab's tables for one view."""
     h = st["headline"]
     waits = ", ".join(f"{E(c or '(no column)')} {n}" for c, n in sorted(h["waiting_by_column"].items(), key=lambda kv: -kv[1]))
     tiles = [(h["open"], f"open; {h['waiting']} of them waiting" + (f" ({waits})" if waits else "")),
              (f"{h['created_14']} : {h['closed_14']}", f"created : closed, last 14 days ({h['done_14']} done, {h['dropped_14']} not planned)"),
              (h["no_goal"], "open cards under no goal"),
              (f"{h['active']} · {h['review']}", "in progress · in review now")]
-    parts = [head, f"<p class='mute small'>Counted by plain code from the read of {E(st['fetched_at'])}: every open card, and the "
-                   f"cards closed in the last {st['closed_days']} days. No model is involved.</p>",
+    parts = [f"<p class='mute small'>Counted by plain code from the read of {E(st['fetched_at'])}: {E(what)} (open, and closed "
+             f"in the last {st['closed_days']} days). No model is involved.</p>",
              "<div class='tiles wide'>" + "".join(f"<div class=tile><b>{E(str(v))}</b>{t}</div>" for v, t in tiles) + "</div>"]
     parts.append("<h3 class=sh>Created and closed, per week</h3>" + chart_weeks(st["weeks"]))
     if any(w["short"] for w in st["weeks"]):
@@ -720,7 +780,71 @@ def stats_section(b):
                    f"<td class=n>{d['dropped'] or ''}</td></tr>" for d in st["days"])
     parts.append(f"<h3 class=sh>The last 14 days, by day <span class='mute small'>(UTC)</span></h3><table class=narrow><tr><th>day</th>"
                  f"<th class=n>created</th><th class=n>done</th><th class=n>not planned</th></tr>{days}</table>")
-    return parts, ref
+    return parts
+
+
+def _has_sprint(b):
+    d = b.latest_analysis()
+    try:
+        return bool(json.loads((d / "facts.json").read_text(encoding="utf-8")).get("sprint", {}).get("keys")) if d else False
+    except (OSError, ValueError):
+        return False
+
+
+MODEL_NOTES = {("reading", "opus"): "reads more carefully; a reading costs several times Sonnet's",
+               ("reading", "sonnet"): "quicker and cheaper; a reading is about $0.10 to $0.20 API-equivalent",
+               ("spirit", "opus"): "deeper answers; each message costs several times Sonnet's",
+               ("spirit", "sonnet"): "quick; a message is about $0.01 to $0.08 API-equivalent"}
+
+
+def claude_section(h, bs, ui):
+    """The Claude tab: which models, what to run, and every call with its cost."""
+    cfg = home.config(h)
+    parts = ["<h2>Claude</h2><p class='mute small'>Everything here involves Claude Code under your own Claude account, "
+             "except reading the board and the facts. Nothing is ever written to your board.</p>"]
+    rows = []
+    for role, key, label in (("reading", "analyst", "The reading"), ("spirit", "spirit", "The spirit")):
+        now = cfg["models"].get(key, "")
+        if ui:
+            ctl = (f"<span class=scope data-model-role={role}>" + "".join(
+                f"<button type=button data-model={m} aria-pressed={str(now == m).lower()}>{m.capitalize()}</button>"
+                for m in home.MODELS) + "</span>")
+        else:
+            ctl = f"<code>{E(now)}</code> <span class='cmdhint'>manager model {role} opus|sonnet</span>"
+        rows.append(f"<tr><td>{label}</td><td>{ctl}</td><td class='mute small'>{E(MODEL_NOTES.get((role, now), ''))}</td></tr>")
+    parts.append("<h3 class=sh>Models</h3><table class=narrow>" + "".join(rows) + "</table>")
+    acts = []
+    for b in bs:
+        if ui:
+            acts.append(f"<div class='card runbox' data-board=\"{E(b.name)}\"><b>{E(b.name)}</b> "
+                        f"<button type=button class=act data-run=facts>Read the board and run the facts</button> "
+                        f"<button type=button class=act data-run=reading>Run a reading</button>"
+                        f"<div class='mute small runstate'></div></div>")
+        else:
+            acts.append(f"<div class=card><b>{E(b.name)}</b><div class=cmdhint>manager analyze --read --facts-only -b {E(b.name)}"
+                        f"</div><div class=cmdhint>manager analyze --read -b {E(b.name)}</div></div>")
+    if acts:
+        parts.append("<h3 class=sh>Run</h3><p class='mute small'>Reading the board and the facts call no model and cost nothing. "
+                     "A reading is one Claude session with the model above; it takes a few minutes. One run at a time; the "
+                     "page refreshes itself when it is done.</p>" + "".join(acts))
+    runs = home.read_jsonl(h / "runs.jsonl")
+    total = sum(r.get("cost_usd") or 0 for r in runs)
+    if runs:
+        body = "".join(f"<tr><td>{E(str(r.get('at', '')))}</td><td>{E(str(r.get('board', '')))}</td><td>{E(str(r.get('label', '')))}</td>"
+                       f"<td>{E(str(r.get('model', '')))}</td><td class=n>{E(str(r.get('seconds', '')))} s</td>"
+                       f"<td class=n>{'$%.2f' % r['cost_usd'] if isinstance(r.get('cost_usd'), (int, float)) else '-'}</td>"
+                       f"<td>{E(str(r.get('error') or ''))}</td></tr>" for r in reversed(runs[-30:]))
+        parts.append(f"<h3 class=sh id=calls>Model calls <span class='mute small'>all time ${total:.2f}, API-equivalent</span></h3>"
+                     f"<div class=scroll><table><tr><th>when</th><th>board</th><th>call</th><th>model</th><th class=n>time</th>"
+                     f"<th class=n>cost</th><th></th></tr>{body}</table></div>")
+    else:
+        parts.append("<h3 class=sh id=calls>Model calls</h3><p class='mute small'>None yet. A reading and each message to the "
+                     "spirit appear here with what they cost.</p>")
+    parts.append("<h3 class=sh>The spirit</h3><p class=small>" + ("Talk to it in the column on the right: about the board, a "
+                 "card, a finding, or what to do next. <b>Discuss this with Spirit</b> on any point starts there." if ui else
+                 "<code>manager ui</code> serves this page with the spirit beside it; <code>manager chat</code> talks in the "
+                 "terminal.") + "</p>")
+    return parts
 
 
 def build(h=None):
@@ -735,18 +859,27 @@ def render(h=None, ui=False):
     """The page as text. ui=True is `manager ui`'s page: the spirit's column goes where CHAT marks."""
     h = h or home.home_dir()
     cmd, why = guide.next_step(h)
+    bs = home.boards(h)
+    days = int(bs[0].settings["rules"].get("recent_days", 60)) if bs else 60
+    sprinting = any(_has_sprint(b) for b in bs)
+    views = (f"<span class='scope viewswitch' data-switch=time role=group aria-label='How far back'>"
+             f"<button type=button data-on=recent aria-pressed=true>Last {days} days</button>"
+             "<button type=button data-on=all aria-pressed=false>All time</button></span>"
+             + ("<span class='scope viewswitch' data-switch=scope role=group aria-label='Which cards'>"
+                "<button type=button data-on=sprint aria-pressed=true>This sprint</button>"
+                "<button type=button data-on=all aria-pressed=false>Everything</button></span>" if sprinting else ""))
     body = [f"<div class=top><h1>hearth<span>wood</span><small>version {E(__version__)} · built {E(home.now_iso())}</small></h1>"
-            "<span class=tools><a class=theme href=#criteria>criteria</a><a class=theme href=#calls>model calls</a>"
+            f"<span class=tools>{views}<a class=theme href=#criteria>criteria</a>"
             "<button class=theme onclick=\"var r=document.documentElement,d=r.dataset.theme==='dark'||(!r.dataset.theme&&"
             "matchMedia('(prefers-color-scheme: dark)').matches);r.dataset.theme=d?'light':'dark'\">theme</button></span></div>",
             "<nav class=tabs role=tablist aria-label=Views><button type=button role=tab data-tab=active aria-selected=true>Active</button>"
             "<button type=button role=tab data-tab=all aria-selected=false>All</button>"
-            "<button type=button role=tab data-tab=stats aria-selected=false>Stats</button></nav>",
+            "<button type=button role=tab data-tab=stats aria-selected=false>Stats</button>"
+            "<button type=button role=tab data-tab=claude aria-selected=false>Claude</button></nav>",
             "<div class=view data-view=active>",
             f"<div class=nextstep><span class=nlabel>next</span><code>{E(cmd)}</code><div class=hint>{E(why)}</div>"
             + ("<button type=button class=ask data-ask=next>Discuss the next step with Spirit</button>" if ui else "") + "</div>"]
     views_all, views_stats = [], []
-    bs = home.boards(h)
     if bs:
         body.append("<input class=filter id=activefilter type=search placeholder='Filter by number, title, type, label or words' "
                     "aria-label='Filter what needs attention'><p class='mute small' id=activecount hidden></p>")
@@ -761,18 +894,10 @@ def render(h=None, ui=False):
         views_stats += [f"<section class=board data-board=\"{E(b.name)}\">"] + sparts + ["</section>"]
     crit = (h / "criteria.md").read_text(encoding="utf-8") if (h / "criteria.md").exists() else ""
     body.append(f"<h2 id=criteria>Your criteria</h2><pre>{E(crit.strip() or '(none yet)')}</pre>")
-    runs = home.read_jsonl(h / "runs.jsonl")[-10:]
-    if runs:
-        rows = "".join(f"<tr><td>{E(str(r.get('at', '')))}</td><td>{E(str(r.get('board', '')))}</td><td>{E(str(r.get('label', '')))}</td>"
-                       f"<td>{E(str(r.get('model', '')))}</td><td>{E(str(r.get('seconds', '')))} s</td>"
-                       f"<td>{'$%.2f' % r['cost_usd'] if isinstance(r.get('cost_usd'), (int, float)) else '-'}</td>"
-                       f"<td>{E(str(r.get('error') or ''))}</td></tr>" for r in reversed(runs))
-        total = sum(r.get("cost_usd") or 0 for r in home.read_jsonl(h / "runs.jsonl"))
-        body.append(f"<h2 id=calls>Model calls <span class='mute small'>all time ${total:.2f}, API-equivalent</span></h2>"
-                    f"<div class=scroll><table><tr><th>when</th><th>board</th><th>call</th><th>model</th><th>time</th><th>cost</th><th></th></tr>{rows}</table></div>")
     body.append("</div>")
     body += ["<div class=view data-view=all hidden>"] + (views_all or ["<p class=mute>No board yet.</p>"]) + ["</div>"]
     body += ["<div class=view data-view=stats hidden>"] + (views_stats or ["<p class=mute>No board yet.</p>"]) + ["</div>"]
+    body += ["<div class=view data-view=claude hidden>"] + claude_section(h, bs, ui) + ["</div>"]
     page = ("<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
             f"<title>hearthwood</title><style>{CSS}</style></head><body><main>" + "\n".join(body) + "</main>"
             "<aside id=panel role=dialog aria-modal=false aria-labelledby=panel-title aria-hidden=true></aside><div id=tip role=tooltip hidden></div>"

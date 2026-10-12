@@ -186,8 +186,10 @@ manager ui
 
 ## Your day with hearthwood
 
-1. In Terminal: `manager read`, then `manager analyze`, then `manager ui`. (Or just `manager next`,
-   which always says the one next step.)
+1. In Terminal: `manager ui`. On the page, the **Claude** tab has **Read the board and run the
+   facts** (free) and **Run a reading** (one Claude session); the page refreshes itself when it is
+   done. The top row chooses what you see: **Last 60 days** or **All time**, **This sprint** or
+   **Everything**.
 2. On the page, go through **What needs attention**. For each point press **agree** or
    **disagree** and say why in a line. Your reasons are what hearthwood learns from.
 3. **Discuss this with Spirit** opens a chat about that point, beside the board. Ask it anything

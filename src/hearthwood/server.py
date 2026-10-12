@@ -15,6 +15,8 @@ import json
 import secrets
 import shutil
 import subprocess
+import sys
+from pathlib import Path
 import threading
 import time
 import webbrowser
@@ -68,10 +70,64 @@ def history_read(h):
     return out
 
 
+# --- runs started from the page ------------------------------------------------------
+
+RUN_LOCK = threading.Lock()
+
+
+def run_path(h):
+    return h / "run.json"
+
+
+def run_state(h):
+    """What the page last started: {"kind", "board", "pid", "started", "running", "code", "ended", "log"}."""
+    try:
+        st = json.loads(run_path(h).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"running": False}
+    if st.get("running"):
+        try:
+            os.kill(int(st["pid"]), 0)
+        except (OSError, ValueError, KeyError, TypeError):
+            st.update(running=False, code=st.get("code"), ended=st.get("ended") or home.now_iso())
+    return st
+
+
+def start_run(h, board, kind):
+    """Start `manager analyze --read [--facts-only] -b <board>` in the background: one at a time."""
+    if kind not in ("facts", "reading"):
+        raise ValueError("a run is facts or reading")
+    names = [b.name for b in home.boards(h)]
+    if board not in names:
+        raise ValueError(f"no board named {board!r}")
+    with RUN_LOCK:
+        if run_state(h).get("running"):
+            raise RuntimeError("something is already running; wait until it is done")
+        logs = h / "runs"
+        logs.mkdir(exist_ok=True)
+        log = logs / f"{home.stamp()}-{board}-{kind}.log"
+        cmd = [sys.executable, "-m", "hearthwood", "analyze", "--read", "-b", board] + (["--facts-only"] if kind == "facts" else [])
+        here = str(Path(__file__).resolve().parent.parent)         # the same hearthwood as this server, however installed
+        env = dict(os.environ, HEARTHWOOD_HOME=str(h),
+                   PYTHONPATH=os.pathsep.join(x for x in (here, os.environ.get("PYTHONPATH", "")) if x))
+        f = open(log, "w", encoding="utf-8")
+        p = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, env=env, start_new_session=True)
+        st = {"kind": kind, "board": board, "pid": p.pid, "started": home.now_iso(), "running": True, "log": str(log)}
+        run_path(h).write_text(json.dumps(st), encoding="utf-8")
+
+    def wait():
+        code = p.wait()
+        f.close()
+        done = dict(st, running=False, code=code, ended=home.now_iso())
+        run_path(h).write_text(json.dumps(done), encoding="utf-8")
+    threading.Thread(target=wait, daemon=True).start()
+    return st
+
+
 def stamp(h):
     """Changes whenever something the page shows changes: a read, an analysis, a verdict, a call."""
     m = 0.0
-    paths = [h / "criteria.md", h / "runs.jsonl", h / "verdicts.jsonl"]
+    paths = [h / "criteria.md", h / "runs.jsonl", h / "verdicts.jsonl", h / "run.json", h / "config.toml"]
     for b in home.boards(h):
         paths += [b.dir / "board.toml", b.snapshots, b.analyses]
         d = b.latest_analysis()
@@ -246,6 +302,16 @@ class Handler(BaseHTTPRequestHandler):
             if c is None:
                 return self.send(HTTPStatus.NOT_FOUND, "no such card")
             return self.send(HTTPStatus.OK, json.dumps(c, ensure_ascii=False), "application/json")
+        if url.path == "/api/run":
+            if not self.authed(api=True):
+                return self.send(HTTPStatus.FORBIDDEN, "no")
+            st = run_state(self.h)
+            if st.get("log"):
+                try:
+                    st["tail"] = Path(st["log"]).read_text(encoding="utf-8", errors="replace")[-600:]
+                except OSError:
+                    pass
+            return self.send(HTTPStatus.OK, json.dumps(st), "application/json")
         if url.path == "/api/history":
             if not self.authed(api=True):
                 return self.send(HTTPStatus.FORBIDDEN, "no")
@@ -272,6 +338,20 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(HTTPStatus.OK, '{"ok":true}', "application/json")
         if url.path == "/api/chat":
             return self.chat(str(body.get("message") or "").strip(), body.get("about"))
+        if url.path == "/api/run":
+            try:
+                st = start_run(self.h, str(body.get("board") or ""), str(body.get("kind") or ""))
+            except ValueError as e:
+                return self.send(HTTPStatus.BAD_REQUEST, str(e))
+            except RuntimeError as e:
+                return self.send(HTTPStatus.CONFLICT, str(e))
+            return self.send(HTTPStatus.OK, json.dumps(st), "application/json")
+        if url.path == "/api/model":
+            try:
+                home.set_model(self.h, str(body.get("role") or ""), str(body.get("model") or ""))
+            except ValueError as e:
+                return self.send(HTTPStatus.BAD_REQUEST, str(e))
+            return self.send(HTTPStatus.OK, '{"ok":true}', "application/json")
         if url.path == "/api/decide":
             try:
                 row = decide(self.h, body)
@@ -514,6 +594,23 @@ form.onsubmit=async function(e){e.preventDefault();var text=input.value.trim();i
         log.scrollTop=log.scrollHeight})}
     if(!got&&out.textContent==='…')out.remove();
   }catch(err){add('msg err',String(err))}finally{btn.disabled=false;busy=false;input.focus();check()}};
+document.querySelectorAll('[data-model-role]').forEach(function(g){g.addEventListener('click',async function(e){
+  var x=e.target.closest('button[data-model]');if(!x)return;
+  var r=await fetch('/api/model',{method:'POST',headers:{'X-HW-Key':KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({role:g.dataset.modelRole,model:x.dataset.model})});
+  if(r.ok)g.querySelectorAll('button[data-model]').forEach(function(y){y.setAttribute('aria-pressed',String(y===x))})})});
+function runText(st){if(!st||!st.kind)return '';var what=st.kind==='reading'?'reading':'read and facts';
+  if(st.running)return 'Running the '+what+' for '+st.board+' since '+String(st.started).slice(11,16)+' UTC. The page refreshes when it is done.';
+  return 'Last: the '+what+' for '+st.board+(st.code===0?' finished at ':' stopped with an error at ')+String(st.ended||'').slice(11,16)+' UTC.'
+    +(st.code!==0&&st.tail?' '+st.tail.trim().split('\n').slice(-2).join(' '):'')}
+async function runPoll(){try{var st=await (await fetch('/api/run',{headers:{'X-HW-Key':KEY}})).json();
+  document.querySelectorAll('.runbox').forEach(function(bx){bx.querySelector('.runstate').textContent=st.board===bx.dataset.board?runText(st):'';
+    bx.querySelectorAll('button[data-run]').forEach(function(x){x.disabled=!!st.running})})}catch(e){}}
+document.querySelectorAll('.runbox').forEach(function(bx){bx.addEventListener('click',async function(e){var x=e.target.closest('button[data-run]');if(!x)return;
+  if(x.dataset.run==='reading'&&!confirm('Run a reading of '+bx.dataset.board+'? It is one Claude session with the model chosen above.'))return;
+  var r=await fetch('/api/run',{method:'POST',headers:{'X-HW-Key':KEY,'Content-Type':'application/json'},body:JSON.stringify({board:bx.dataset.board,kind:x.dataset.run})});
+  if(!r.ok)bx.querySelector('.runstate').textContent=await r.text();runPoll()})});
+if(document.querySelector('.runbox')){runPoll();setInterval(runPoll,4000)}
 window.hwCard=function(b,k){return fetch('/api/card?board='+encodeURIComponent(b)+'&key='+encodeURIComponent(k),
   {headers:{'X-HW-Key':KEY}}).then(function(r){return r.ok?r.json():null}).catch(function(){return null})};
 fetch('/api/history',{headers:{'X-HW-Key':KEY}}).then(function(r){return r.json()}).then(function(items){

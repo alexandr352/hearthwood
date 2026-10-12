@@ -98,6 +98,30 @@ class Served(unittest.TestCase):
         self.assertEqual(self.call("GET", "/api/card?board=nope&key=LAN-7", headers=self.api())[0], 404)
         self.assertEqual(self.call("GET", "/api/card", headers=self.api())[0], 404)
 
+    def test_the_claude_tab_switches_the_model(self):
+        _, _, page = self.call("GET", "/", headers=self.cookie())
+        self.assertIn("data-tab=claude", page)
+        self.assertIn("data-model-role=reading", page)
+        self.assertEqual(self.call("POST", "/api/model", body='{"role":"reading","model":"sonnet"}', headers=self.cookie())[0], 403)
+        self.assertEqual(self.call("POST", "/api/model", body='{"role":"reading","model":"sonnet"}', headers=self.api())[0], 200)
+        self.assertEqual(home.config(self.t.h)["models"]["analyst"], "sonnet")
+        self.assertEqual(self.call("POST", "/api/model", body='{"role":"reading","model":"gpt"}', headers=self.api())[0], 400)
+
+    def test_a_run_from_the_page(self):
+        import time
+        status, _, body = self.call("POST", "/api/run", body='{"board":"demo","kind":"facts"}', headers=self.api())
+        self.assertEqual(status, 200, body)
+        self.assertEqual(self.call("POST", "/api/run", body='{"board":"demo","kind":"facts"}', headers=self.api())[0], 409)
+        for _ in range(100):
+            st = json.loads(self.call("GET", "/api/run", headers=self.api())[2])
+            if not st["running"]:
+                break
+            time.sleep(0.1)
+        self.assertEqual((st["running"], st["code"], st["kind"]), (False, 0, "facts"))
+        self.assertIn("analysis", st["tail"])
+        self.assertEqual(self.call("POST", "/api/run", body='{"board":"nope","kind":"facts"}', headers=self.api())[0], 400)
+        self.assertEqual(self.call("POST", "/api/run", body='{"board":"demo","kind":"write"}', headers=self.api())[0], 400)
+
     def test_an_oversized_message_is_refused(self):
         big = json.dumps({"message": "x" * (server.MAX_BODY + 1)})
         self.assertEqual(self.call("POST", "/api/chat", body=big, headers=self.api())[0], 413)

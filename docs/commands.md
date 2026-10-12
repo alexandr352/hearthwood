@@ -18,6 +18,7 @@ one. Commands about an analysis use the latest one unless you name another with
 | `manager boards` | Lists the boards and when each was last read. |
 | `manager disconnect <board> [--yes]` | Removes a board from this computer: its snapshots, analyses, settings and token or Jira sign-in. It asks first. Your criteria and verdicts stay, and nothing changes on the board itself. |
 | `manager doctor` | Checks Python, the Claude Code CLI, the home, and every board's token, Jira sign-in or folder. |
+| `manager model [reading\|spirit] [opus\|sonnet]` | Shows the models, or sets the model of the reading or of the spirit in `config.toml`. The Claude tab does the same. |
 | `manager update` | Fetches the newest hearthwood from GitHub, when it was installed with uv. Your home is untouched. |
 
 ## Reading and analysing

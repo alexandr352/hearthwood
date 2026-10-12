@@ -97,6 +97,26 @@ class Recent(unittest.TestCase):
         self.assertEqual(page.count("<details class='card finding older'>"), 1)
 
 
+class Views(unittest.TestCase):
+    def test_the_totals_follow_the_view(self):
+        from hearthwood.worklog import _tiles, _views
+        b = sprint_board()
+        items = {i.key: json.loads(json.dumps(i.__dict__, default=lambda o: o.__dict__)) for i in b.items}
+        a = facts.Analysis(b, settings()).run()
+        fx = a.to_dict()
+        by_rule = {}
+        for f in fx["findings"]:
+            by_rule.setdefault(f["rule"], []).append(f)
+        recent = {k for k, it in items.items() if it["updated"] >= "2026-09-15"}             # #6 (2026-09-01) is older
+        views = dict(_views(items, recent, set(fx["sprint"]["keys"])))
+        self.assertEqual(sorted(views), ["all-all", "all-recent", "sprint-all", "sprint-recent"])
+        tiles = {v: dict(_tiles(items, fx, keep, by_rule)) for v, keep in views.items()}
+        self.assertEqual(tiles["all-all"]["open"], 6)
+        self.assertEqual(tiles["all-recent"]["open"], 5)
+        self.assertEqual(tiles["sprint-all"]["open"], 2)
+        self.assertEqual(tiles["sprint-all"]["finished, 7 days"], 1)
+
+
 class Stats(unittest.TestCase):
     def test_the_sprints_table(self):
         rows = stats.Stats(sprint_board(), settings()).sprints()
@@ -119,24 +139,27 @@ class Page(unittest.TestCase):
 
     def test_a_sprint_board_gets_the_scope_switch_and_the_grouping(self):
         page = self.page(sprint_board())
-        self.assertIn("data-scope=sprint aria-pressed=true>This sprint", page)
+        self.assertIn("data-on=sprint aria-pressed=true>This sprint", page)                # the top-row switch
         self.assertIn("Sprint 9", page)
-        keys = json.loads(re.search(r'<script type=application/json class=insprint data-board="work">(.*?)</script>', page).group(1))
-        self.assertEqual(keys, ["#1", "#2", "#3"])
+        meta = json.loads(re.search(r'<script type=application/json class=boardmeta data-board="work">(.*?)</script>', page).group(1))
+        self.assertEqual(meta["sprint"], ["#1", "#2", "#3"])
+        self.assertEqual(page.count("<div class=tiles data-variant="), 4)                  # the totals, once per view
+        self.assertEqual(page.count("<div data-variant="), 4)                              # Stats, once per view
         self.assertIn("data-group=sprint aria-pressed=true>by sprint", page)
         order = json.loads(re.search(r'data-sprints="([^"]*)"', page).group(1).replace("&quot;", '"'))
         self.assertEqual([s["name"] for s in order], ["Sprint 9", "Sprint 10", "Groomed", "Sprint 8"])
         self.assertIn("Sprints: running and coming", page)
         for v in ("sprint-recent", "sprint-all", "all-recent", "all-all"):         # a ready list per view
             self.assertIn(f"<div class='card readylist' data-variant={v}>", page)
-        self.assertIn("data-time=recent aria-pressed=true>Last 60 days", page)
+        self.assertIn("data-on=recent aria-pressed=true>Last 60 days", page)
 
     def test_a_board_without_sprints_keeps_the_old_page(self):
         page = self.page(board(item("#1"), item("#2")))
-        self.assertNotIn("data-scope=sprint aria-pressed", page)
+        self.assertNotIn("data-switch=scope", page)
         self.assertNotIn("data-group=sprint", page)
         self.assertNotIn("Sprints: running and coming", page)
-        self.assertIn("data-time=recent aria-pressed=true>Last 60 days", page)     # the time switch is for every board
+        self.assertIn("data-on=recent aria-pressed=true>Last 60 days", page)       # the time switch is for every board
+        self.assertEqual(page.count("<div class=tiles data-variant="), 2)
 
 
 if __name__ == "__main__":

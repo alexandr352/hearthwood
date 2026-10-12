@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.0 — 2026-10-12
+
+- **The view, for every tab.** The top row holds **Last 60 days | All time** and, with a running
+  sprint, **This sprint | Everything**. Active's totals, points and findings, the All tab's cards
+  ("N of M" per group) and every Stats number follow it. Each combination is computed when the
+  page is built; switching is instant. The per-board switches inside Active are gone.
+- **A Claude tab**: the models of the reading and the spirit (Opus or Sonnet, one click; also
+  `manager model`), **Read the board and run the facts** and **Run a reading** from the page, in the
+  background, one at a time, the page refreshing when done; and the model calls with their cost,
+  moved out of Active. "model calls" in the top row, which led nowhere before the first call, is
+  gone.
+- **Links to the tracker open in a new tab.**
+- The page hides what it hides even where a rule would show it (`[hidden]` now always wins).
+
 ## 0.10.1 — 2026-10-12
 
 - **Recent first.** The Active tab gets **Last 60 days | All time** (`recent_days`), on by default:
