@@ -203,6 +203,16 @@ def close_reason(resolution):
     return "completed"
 
 
+def current_sprint(value):
+    """The sprint a card is in now: the running one if any, else the last it was put in (a card carried
+    over keeps its old sprints in the list)."""
+    sprints = [s for s in (value if isinstance(value, list) else [value]) if isinstance(s, dict) and s.get("name")]
+    if not sprints:
+        return None
+    active = [s for s in sprints if (s.get("state") or "").lower() == "active"]
+    return (active or sprints)[-1]
+
+
 def _who(user):
     return (user or {}).get("displayName") or ""
 
@@ -247,11 +257,10 @@ def issue_to_item(n, site_url, column_of, sprint_field=None, rank=None):
         fields["fix_versions"] = [v.get("name") for v in f["fixVersions"] if v.get("name")]
     if duplicates:
         fields["duplicates"] = duplicates
-    if sprint_field and f.get(sprint_field):
-        sprints = f[sprint_field] if isinstance(f[sprint_field], list) else [f[sprint_field]]
-        names = [s.get("name") for s in sprints if isinstance(s, dict) and s.get("name")]
-        if names:
-            fields["sprint"] = names[-1]
+    s = current_sprint(f.get(sprint_field)) if sprint_field else None
+    if s:
+        fields.update(sprint=s["name"], sprint_state=(s.get("state") or "").lower(), sprint_start=utc(s.get("startDate")),
+                      sprint_end=utc(s.get("endDate")), sprint_goal=(s.get("goal") or "").strip())
     return Item(
         key=n["key"], title=f.get("summary") or "", state="closed" if done else "open",
         url=f"{site_url.rstrip('/')}/browse/{n['key']}", kind=((f.get("issuetype") or {}).get("name") or ""),

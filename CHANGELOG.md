@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.10.0 — 2026-10-12
+
+Sprint-shaped pages for a board with sprints (Jira). A board without sprints looks as before.
+
+- **This sprint | Everything** on the Active tab. This sprint is the default: the points,
+  questions, proposals, findings and ready list narrow to what concerns the running sprint's
+  cards. The facts do not change; the choice is remembered.
+- **The All tab groups by sprint**: the running sprint first and open, then the coming sprints and
+  the parking ones ("Groomed", "Ideas") by start date, then no sprint, then the closed sprints,
+  each with its dates and its cards counted by column, cards in rank order. A switch goes back to
+  columns.
+- **Stats: a Sprints table**, every running and coming sprint with its cards, where they are, and
+  its progress.
+- **The reading puts the sprint first.** `facts.md` has a This sprint section, and the reading is
+  told to lead with the running sprint and say when a point is outside it.
+- **The sprint's state, dates and goal are read from Jira**, and a card carried over several
+  sprints counts in the running one.
+
 ## 0.9.4 — 2026-10-12
 
 - **`manager disconnect <board>`** removes a board from this computer: its snapshots, analyses,

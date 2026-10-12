@@ -155,7 +155,8 @@ For every open issue of the project, and every issue updated within `closed_days
 rank order. An issue is finished when Jira resolved it, or when its status is in the Done category:
 some workflows never use that category and only resolve, so either one counts.
 
-- the summary, type, status, labels and priority, the fix versions and the sprint
+- the summary, type, status, labels and priority, the fix versions, and the sprint the issue is in
+  now (the running one, or the last it was put in) with its state, dates and goal
 - the parent (an epic, or the issue a sub-task belongs to), the sub-tasks, and the "is blocked by"
   links
 - the resolution: Done and the like are finished, Won't Do and the like are not planned, Duplicate

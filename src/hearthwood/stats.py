@@ -12,6 +12,7 @@ with a `[stats] goal_labels` pattern, so a goal with nothing under it yet still 
 import fnmatch
 from datetime import timedelta
 
+from . import sprints as sprints_
 from .facts import days_between, parse_ts
 
 WEEKS = 6
@@ -134,6 +135,24 @@ class Stats:
         rows.sort(key=lambda r: (-r["open"], -r["cards"]))
         return rows, empty
 
+    def sprints(self):
+        """The running and future sprints: their size, where their cards are, and how far along."""
+        rows = []
+        for s in sprints_.ordered(self.board.items):
+            if s["state"] == "closed":
+                continue
+            cards = [it for it in self.board.items if (sprints_.sprint_of(it.fields) or {}).get("name") == s["name"]]
+            open_ = [it for it in cards if it.state == "open"]
+            done = sum(1 for it in cards if _done(it))
+            by = {}
+            for it in open_:
+                r = self.role(it) or "other"
+                by[r] = by.get(r, 0) + 1
+            rows.append(dict(s, cards=len(cards), open=len(open_), done=done, waiting=by.get("startable", 0) + by.get("parked", 0),
+                             active=by.get("active", 0), review=by.get("review", 0),
+                             progress=round(100 * done / (done + len(open_))) if done + len(open_) else None))
+        return rows
+
     def types(self):
         cols = self.columns()
         table = {}
@@ -178,6 +197,6 @@ class Stats:
         goals, empty = self.goals()
         cols, types = self.types()
         ages, parked_old, parked = self.ages()
-        return {"headline": self.headline(), "weeks": self.weeks(), "goals": goals, "empty_goals": empty,
+        return {"headline": self.headline(), "weeks": self.weeks(), "goals": goals, "empty_goals": empty, "sprints": self.sprints(),
                 "type_columns": cols, "types": types, "ages": ages, "parked_old": parked_old, "parked": parked,
                 "days": self.days(), "closed_days": self.closed_days, "fetched_at": self.board.fetched_at}

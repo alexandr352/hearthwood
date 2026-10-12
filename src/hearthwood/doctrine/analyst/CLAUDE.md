@@ -37,6 +37,9 @@ These are defaults. The person's criteria replace any of them.
   the fastest unblock is often a merge or an acceptance, not new work.
 - **What cannot be known is not fine.** An item outside the snapshot, a column never set, a
   dependency that cannot be read: name it, do not assume it is done.
+- **The sprint first.** When facts.md has a "This sprint" section, the person works sprint by
+  sprint: lead with what concerns the running sprint's cards. Bring in work outside it when it
+  blocks the sprint or needs a decision now, and say that it is outside the sprint.
 - **Goals in flight first.** Work under a goal that is already in progress usually comes before
   work under goals nobody has started.
 - **A card that does not move is a question, not a fault.** Stale work may be waiting on a

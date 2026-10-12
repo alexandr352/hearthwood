@@ -16,7 +16,7 @@ import statistics
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 
-from . import search
+from . import search, sprints
 
 SEVERITIES = ("high", "medium", "low", "info")
 STOP = {"a", "an", "the", "to", "of", "in", "on", "for", "and", "or", "with", "is", "be", "by", "at", "as",
@@ -474,9 +474,25 @@ class Analysis:
 
     # --- output -----------------------------------------------------------------
 
+    def sprint(self):
+        """The running sprints and their cards: {"active": [sprint, ...], "keys": [...], "findings": [...]}."""
+        order = sprints.ordered(self.board.items)
+        active = [s for s in order if s["state"] == "active"]
+        keys = sorted(sprints.active_keys(self.board.items), key=_num)
+        inside = set(keys)
+        for s in active:
+            cards = [it for it in self.board.items if (sprints.sprint_of(it.fields) or {}).get("name") == s["name"]]
+            by = {}
+            for it in cards:
+                c = it.column or ("closed" if it.state == "closed" else "(no column)")
+                by[c] = by.get(c, 0) + 1
+            s["cards"], s["by_column"] = len(cards), by
+        return {"active": active, "keys": keys,
+                "findings": [f.id for f in self.findings if inside.intersection(f.keys)]}
+
     def to_dict(self):
         return {"board": self.board.name, "fetched_at": self.board.fetched_at, "notes": self.board.notes,
-                "flow": self.flow, "ready": self.ready, "search": self.search,
+                "flow": self.flow, "ready": self.ready, "search": self.search, "sprint": self.sprint(),
                 "similar": {k: v for k, v in self.similar.items() if self.items[k].state == "open"},
                 "findings": [asdict(f) for f in self.findings]}
 
@@ -518,6 +534,18 @@ class Analysis:
                 f"- median days from opened to finished (last 30 days): {f['median_days_open_to_finished_30d']}",
                 f"- median age of open items by column role: {f['median_age_open_by_role']}",
                 f"- median days spent in each column (from status history): {f['median_days_in_column']}", ""]
+        sp = self.sprint()
+        if sp["active"]:
+            out += ["## This sprint", "", "The person works sprint by sprint. These are the running sprints, their cards "
+                    "by column, and the findings that touch those cards.", ""]
+            for s in sp["active"]:
+                out.append(f"- {s['name']}: {s['start'][:10] or '?'} to {s['end'][:10] or '?'}, {s['cards']} cards ("
+                           + ", ".join(f"{c} {n}" for c, n in s["by_column"].items()) + ")"
+                           + (f"; goal: {s['goal']}" if s["goal"] else ""))
+            ready_in = [k for k in self.ready if k in set(sp["keys"])]
+            out += [f"- cards in the sprint: {', '.join(sp['keys'])}",
+                    f"- ready to start in the sprint: {', '.join(ready_in) or '(none)'}",
+                    f"- findings touching the sprint: {', '.join(sp['findings']) or '(none)'}", ""]
         out += ["## Findings", "", "Each finding: id, rule, severity, what it says. The person's earlier verdict on the "
                 "same finding follows it when there is one.", ""]
         for x in self.findings:
