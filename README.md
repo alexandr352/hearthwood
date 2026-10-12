@@ -16,7 +16,7 @@ laptop to your Jira board on the page, with no programming.
                                           └──── criteria.md ◄─────┴── verdicts ◄──┘
 ```
 
-![The page served by manager ui after one reading of the demo board: the tabs, the next step, the board's numbers, the summary and the first point of attention with Discuss this with Spirit, agree and disagree; on the right, the spirit discussing that point, with the cards it opened and what it found](docs/screenshot.png)
+![The page served by manager ui after one reading of the demo board: the view switch (last 60 days, all time) and the four tabs, the next step, the board's numbers, and the summary, which notes that a comment says a design decision is settled; on the right, the spirit discussing the second point, with the cards and the comment it read](docs/screenshot.png)
 
 It is the sister of [hearthwork](https://github.com/alexandr352/hearthwork), which runs
 development tickets. Hearthwood looks after the board those tickets live on.
