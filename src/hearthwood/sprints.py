@@ -5,8 +5,10 @@ A board read from Jira carries each card's current sprint in its fields: `sprint
 without sprints (GitHub, markdown) has none of these, and everything here is empty for it.
 
 Teams use Jira's sprints two ways: as real time-boxes, and as parking places that are never started
-("Groomed", "Ideas"). Jira tells them apart by state, so the order is: the running sprints, then the
-future ones (by start date, those with none last), then the closed ones (newest first).
+("Groomed", "Ideas"). Jira tells them apart by state and dates, so the order is: the running sprints,
+then the coming ones (a start date ahead, or at most PAST_START_DAYS behind; newest first), then the
+parking places (no start date, or one long gone by) with the most recently worked-on first, then the
+closed ones (newest first).
 """
 
 
@@ -24,20 +26,40 @@ def _fields(it):
     return it.get("fields") if isinstance(it, dict) else it.fields
 
 
+PAST_START_DAYS = 30
+
+
 def ordered(items):
-    """Every sprint the items name, once, in board order: active, future, closed."""
-    seen = {}
+    """Every sprint the items name, once, in board order: running, coming, parking, closed."""
+    seen, last = {}, {}
     for it in items:
         s = sprint_of(_fields(it))
-        if s and s["name"] not in seen:
-            seen[s["name"]] = s
-    rank = {"active": 0, "future": 1, "": 1, "closed": 2}
+        if not s:
+            continue
+        seen.setdefault(s["name"], s)
+        u = (it.get("updated") if isinstance(it, dict) else it.updated) or ""
+        last[s["name"]] = max(last.get(s["name"], ""), u)
+    now = max(last.values(), default="")
+    cutoff = _days_before(now, PAST_START_DAYS)
+
     def key(s):
-        r = rank.get(s["state"], 1)
-        if r == 2:
-            return (r, "~" if not s["end"] else "", _desc(s["end"]), s["name"])
-        return (r, s["start"] or "~", s["name"])
+        if s["state"] == "active":
+            return (0, s["start"], s["name"])
+        if s["state"] == "closed":
+            return (3, _desc(s["end"] or s["start"]), s["name"])
+        if s["start"] and s["start"] >= cutoff:
+            return (1, _desc(s["start"]), s["name"])
+        return (2, _desc(last.get(s["name"], "")), s["name"])
     return sorted(seen.values(), key=key)
+
+
+def _days_before(ts, days):
+    from datetime import datetime, timedelta, timezone
+    try:
+        t = datetime.strptime(ts[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return ""
+    return (t - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _desc(ts):

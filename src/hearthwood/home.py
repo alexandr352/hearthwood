@@ -69,6 +69,8 @@ parked = ["Backlog", "Icebox"]               # deliberately not now
 [rules]
 blocking_labels = ["blocked", "needs:*"]     # a label that stops work; * matches anything
 stale_days = 7                               # active or in review, untouched this long
+abandoned_days = 180                         # untouched this long: one "long untouched" finding for them all
+recent_days = 60                             # the page shows findings about cards touched this recently first
 duplicate_search = "full-text"               # full-text (title and description) | titles
 duplicate_match = 0.5                        # 0..1, how closely two items must read alike (full-text)
 duplicate_candidates = 5                     # closest matches kept per item, for the reading

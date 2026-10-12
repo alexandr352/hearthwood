@@ -31,6 +31,16 @@ class Order(unittest.TestCase):
     def test_active_then_future_by_start_then_closed(self):
         self.assertEqual([s["name"] for s in sprints.ordered(sprint_board().items)], ["Sprint 9", "Sprint 10", "Groomed", "Sprint 8"])
 
+    def test_newer_coming_sprints_first_and_parking_after(self):
+        b = board(item("#1", updated="2023-01-01T00:00:00Z", fields=sp("Old plan", "future", "2022-09-01T00:00:00Z")),
+                  item("#2", updated="2026-10-09T00:00:00Z", fields=sp("Next", "future", "2026-10-20T00:00:00Z")),
+                  item("#3", updated="2026-10-08T00:00:00Z", fields=sp("Ideas", "future")),
+                  item("#6", updated="2024-05-01T00:00:00Z", fields=sp("Leftovers", "future")),
+                  item("#4", fields=sp("S1", "closed", "2026-01-01T00:00:00Z", "2026-01-14T00:00:00Z")),
+                  item("#5", fields=sp("S2", "closed", "2026-02-01T00:00:00Z", "2026-02-14T00:00:00Z")))
+        # coming first; then parking, most recently worked-on first ("Old plan" started in 2022: parking now)
+        self.assertEqual([s["name"] for s in sprints.ordered(b.items)], ["Next", "Ideas", "Leftovers", "Old plan", "S2", "S1"])
+
     def test_the_running_sprints_cards_include_the_finished_ones(self):
         self.assertEqual(sprints.active_keys(sprint_board().items), {"#1", "#2", "#3"})
 
@@ -64,6 +74,29 @@ class Facts(unittest.TestCase):
         self.assertNotIn("## This sprint", facts.Analysis(board(item("#1")), settings()).run().to_markdown())
 
 
+class Recent(unittest.TestCase):
+    def test_long_untouched_cards_are_one_finding(self):
+        b = board(item("#1", column="In Progress", updated="2026-10-01T00:00:00Z"),          # 9 days: stale
+                  item("#2", column="In Progress", updated="2025-01-01T00:00:00Z"),          # over 180 days
+                  item("#3", column="In Review", updated="2023-03-01T00:00:00Z"))
+        a = facts.Analysis(b, settings()).run()
+        stale = [f for f in a.findings if f.rule == "stale"]
+        dead = [f for f in a.findings if f.rule == "long-untouched"]
+        self.assertEqual([f.keys for f in stale], [["#1"]])
+        self.assertEqual(len(dead), 1)
+        self.assertEqual(dead[0].keys, ["#3", "#2"])                                       # oldest first
+        self.assertIn("2 cards", dead[0].title)
+
+    def test_findings_about_recent_cards_come_first_and_old_ones_are_marked(self):
+        b = board(item("#1", column="In Progress", updated="2026-09-01T00:00:00Z"),
+                  item("#2", column="In Progress", updated="2026-06-01T00:00:00Z"))
+        page = Page().page(b)
+        i, j = page.index(">#1</button> has not moved"), page.index(">#2</button> has not moved")
+        self.assertLess(i, j)
+        self.assertRegex(page, r"\d+ about cards touched in the last 60 days, 1 older")
+        self.assertEqual(page.count("<details class='card finding older'>"), 1)
+
+
 class Stats(unittest.TestCase):
     def test_the_sprints_table(self):
         rows = stats.Stats(sprint_board(), settings()).sprints()
@@ -94,14 +127,16 @@ class Page(unittest.TestCase):
         order = json.loads(re.search(r'data-sprints="([^"]*)"', page).group(1).replace("&quot;", '"'))
         self.assertEqual([s["name"] for s in order], ["Sprint 9", "Sprint 10", "Groomed", "Sprint 8"])
         self.assertIn("Sprints: running and coming", page)
-        self.assertIn("<div class='card readylist only-sprint'>", page)           # the sprint's own ready list
-        self.assertIn("in this sprint</span>", page)
+        for v in ("sprint-recent", "sprint-all", "all-recent", "all-all"):         # a ready list per view
+            self.assertIn(f"<div class='card readylist' data-variant={v}>", page)
+        self.assertIn("data-time=recent aria-pressed=true>Last 60 days", page)
 
     def test_a_board_without_sprints_keeps_the_old_page(self):
         page = self.page(board(item("#1"), item("#2")))
         self.assertNotIn("data-scope=sprint aria-pressed", page)
         self.assertNotIn("data-group=sprint", page)
         self.assertNotIn("Sprints: running and coming", page)
+        self.assertIn("data-time=recent aria-pressed=true>Last 60 days", page)     # the time switch is for every board
 
 
 if __name__ == "__main__":

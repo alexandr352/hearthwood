@@ -75,6 +75,8 @@ an analysis other than the latest. The page's buttons (`manager ui`) record thro
 | `[columns] startable`, `active`, `review`, `done`, `parked` | which of your columns play which role ([How it works](how-it-works.md#column-roles)) |
 | `[rules] blocking_labels` | labels that stop work; `*` matches anything, e.g. `needs:*` |
 | `[rules] stale_days` | days without an update before active or in-review work counts as not moving |
+| `[rules] abandoned_days` | days without an update after which such work goes into one "long untouched" finding instead (180) |
+| `[rules] recent_days` | what "Last N days" on the Active tab means: findings and ready cards about cards touched this recently (60) |
 | `[rules] duplicate_search` | `full-text` (the default: titles and descriptions, by SQLite FTS5) or `titles` (title words only) |
 | `[rules] duplicate_match` | 0 to 1: how closely two items must read alike to be named (full-text); 1 is as close as an item is to itself |
 | `[rules] duplicate_candidates` | how many closest matches per item go into `similar.md` for the reading |

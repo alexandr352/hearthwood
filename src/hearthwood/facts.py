@@ -247,6 +247,8 @@ class Analysis:
 
     def r_stale(self):
         limit = float(self.rules.get("stale_days", 7))
+        dead_after = float(self.rules.get("abandoned_days", 180))
+        dead = []
         for it in self.open_items():
             role = self.role(it)
             if role not in ("active", "review") or self.is_goal(it):
@@ -255,10 +257,22 @@ class Analysis:
             if not t:
                 continue
             age = days_between(t, self.now)
-            if age >= limit:
+            if age >= dead_after:
+                dead.append((age, it))
+            elif age >= limit:
                 self.add("stale", "medium" if age >= 2 * limit else "low", f"{it.key} has not moved in {int(age)} days",
                          [it.key], f"{it.key} \"{it.title}\" has been {('in ' + it.column) if it.column else 'open'} with "
                          f"no update for {int(age)} days (the limit is {int(limit)}).", {"days": round(age, 1)})
+        if dead:
+            dead.sort(key=lambda x: -x[0])
+            oldest = dead[0]
+            self.add("long-untouched", "low", f"{count_of(len(dead), 'card')} in progress or review untouched for over "
+                     f"{int(dead_after)} days", [it.key for _, it in dead],
+                     f"{count_of(len(dead), 'card')} sit in progress or in review with no update for more than "
+                     f"{int(dead_after)} days; the oldest, {oldest[1].key}, for {int(oldest[0])} days. Work this old is "
+                     "rarely still going on: each is probably finished, dropped, or waiting on something nobody wrote "
+                     "down. One decision for the lot (close, move back, or ask) usually clears it.",
+                     {"days_oldest": round(oldest[0], 1), "count": len(dead)})
 
     def r_pull_requests(self):
         if not self.board.prs_read:

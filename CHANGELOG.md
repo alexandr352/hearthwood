@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.1 — 2026-10-12
+
+- **Recent first.** The Active tab gets **Last 60 days | All time** (`recent_days`), on by default:
+  findings and ready cards about cards touched in the window; the rest one click away. Findings
+  about recent cards always come first, and the heading counts recent and older. It combines with
+  This sprint | Everything and with the filter; the ready list has its own count for each view.
+- **Long-untouched work is one finding.** Active or in-review cards with no update for over
+  `abandoned_days` (180) no longer get a "not moving" line each: one "long untouched" finding
+  lists them, oldest first. On a large real board that folded 50 lines into one.
+- **Newer sprints higher.** On the All tab and in Stats: the running sprint, then the coming ones
+  newest first, then the parking sprints (no date, or a start long gone by) with the most recently
+  worked-on first, then the closed ones newest first.
+- The guide removes the demo as its own step, right after trying it.
+
 ## 0.10.0 — 2026-10-12
 
 Sprint-shaped pages for a board with sprints (Jira). A board without sprints looks as before.

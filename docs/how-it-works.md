@@ -71,6 +71,7 @@ it is never "ready" and never "not moving".
 | `waits-on-review` | low | Items whose only blockers are in review. The quickest unblock is a merge or an acceptance. |
 | `cycle` | high | Items that wait on each other, so none of them can start. |
 | `stale` | medium, low | Active or in-review work with no update for `stale_days` days. It is medium at twice the limit. |
+| `long-untouched` | low | One finding for all active or in-review work with no update for over `abandoned_days` days (180 by default), oldest first. Work that old is probably finished, dropped or forgotten; one decision for the lot beats one line per card. |
 | `merged-not-done` | medium | An open item with a merged pull request. |
 | `review-without-pr` | medium | An item in review with no open or merged pull request linked to it. |
 | `pr-not-in-review` | low | An item still waiting or in progress, with an open, non-draft pull request. |
@@ -219,13 +220,18 @@ The page has three tabs; the one you last chose comes back, and `log.html#tab=st
   **Everything**. This sprint is the default: it shows only what concerns the running sprint's
   cards (finished ones included), and the ready list narrows the same way. The facts are the same
   either way; only what is shown changes, and the choice is remembered.
+  A second switch, **Last 60 days | All time** (on every board; `recent_days` in board.toml), keeps
+  findings and ready cards about cards touched recently, and is on by default. Findings about
+  recent cards always come first; the heading says how many are recent and how many older. The
+  reading's own points are always shown.
   A filter narrows them as you type: a line stays when its own words match, or the number, title,
   type or label of a card it names; the ready list keeps the cards that match; it says how many of
   how many are shown.
 - **All**: every card on the board, grouped by column in the board's order, closed cards folded at
   the end. On a board with sprints it groups **by sprint** instead (a switch goes back to columns):
-  the running sprint first and open, then the coming ones and the parking sprints by start date,
-  then cards in no sprint, then the closed sprints, each folded, with its cards counted by column
+  the running sprint first and open; then the coming ones, newest first; then the parking sprints
+  (no start date, or one long gone by), the most recently worked-on first; then cards in no
+  sprint; then the closed sprints, newest first. Each is folded, with its cards counted by column
   and its dates. Inside a group, cards are in the board's rank order. A filter narrows it by number, title, type or label as you type, and every row opens the
   card in the panel.
 - **Stats**: the numbers of the board, counted by plain code from the snapshot, with no model:

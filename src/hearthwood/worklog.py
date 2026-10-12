@@ -66,8 +66,7 @@ box-shadow:-4px 0 24px rgba(0,0,0,.18);transform:translateX(105%);transition:tra
 #panel .desc{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
 #panel .talk .desc{border-top:0;padding-top:4px;margin-top:0}#panel .talk{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
 #panel .badge.new{margin-left:6px;color:var(--amber);border-color:var(--amber)}
-section[data-scope=sprint] .only-all,section:not([data-scope=sprint]) .only-sprint{display:none}
-.scope{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.scope button{font:13px var(--font);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:6px 14px;color:var(--mute);cursor:pointer}.scope button[aria-pressed=true]{color:var(--ink);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.scope{display:inline-flex;flex-wrap:wrap;gap:6px;margin:6px 12px 10px 0;vertical-align:top}.scope button{font:13px var(--font);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:6px 14px;color:var(--mute);cursor:pointer}.scope button[aria-pressed=true]{color:var(--ink);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 #panel h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:16px 0 4px}
 .tabs{display:flex;align-items:baseline;gap:4px;margin:14px 0 4px;border-bottom:1px solid var(--line)}
 .tabs button{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:6px 12px 8px;color:var(--mute);font:14px var(--font);cursor:pointer}
@@ -252,35 +251,38 @@ function allList(sec){var box=sec.querySelector('.allist'),b=sec.dataset.board,c
 document.querySelectorAll('[data-view=all] section[data-board]').forEach(allList);
 (function(){var f=document.getElementById('activefilter'),cnt=document.getElementById('activecount');if(!f)return;
   var inSprint={};document.querySelectorAll('script.insprint').forEach(function(s){try{inSprint[s.dataset.board]=new Set(JSON.parse(s.textContent))}catch(e){}});
-  function scopeOf(sec){var sw=sec.querySelector('.scope');return sw&&sw.dataset.on!=='all'?inSprint[sec.dataset.board]||null:null}
   function about(b,k){var c=card(b,k);return ' '+k+(c?' '+(c.title||'')+' '+(c.type||'')+' '+(c.labels||[]).join(' ')+' '+(c.sprint||''):'')}
   function words(sec,n){var t='',w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT),x;
     while((x=w.nextNode()))if(!x.parentNode.closest('.acts,.cmdhint'))t+=' '+x.nodeValue;
     n.querySelectorAll('button.key').forEach(function(k){t+=about(k.dataset.board||sec.dataset.board,k.dataset.key)});return t.toLowerCase()}
   function apply(){var q=f.value.trim().toLowerCase(),shown=0,all=0,narrowed=false;
-    document.querySelectorAll('[data-view=active] section[data-board]').forEach(function(sec){var head=null,first=true,seen=false,set=scopeOf(sec);
-      if(set)narrowed=true;sec.dataset.scope=set?'sprint':'all';
-      function close(){if(head)head.hidden=(!!q||!!set)&&!seen}
+    document.querySelectorAll('[data-view=active] section[data-board]').forEach(function(sec){var head=null,first=true,seen=false;
+      var sw=sec.querySelector('.sprintscope'),set=sw&&sw.dataset.on!=='all'?inSprint[sec.dataset.board]||null:null;
+      var tw=sec.querySelector('.timescope'),recentOnly=!!tw&&tw.dataset.on!=='all',variant=(set?'sprint':'all')+'-'+(recentOnly?'recent':'all');
+      if(set||recentOnly)narrowed=true;
+      sec.querySelectorAll('[data-variant]').forEach(function(x){x.hidden=x.dataset.variant!==variant});
+      function close(){if(head)head.hidden=(!!q||narrowed)&&!seen}
       [].slice.call(sec.children).forEach(function(n){
         if(n.tagName==='H2'){if(first){first=false;return}close();head=n;seen=false;return}
         if(!n.classList.contains('card'))return;
-        if(n.classList.contains(set?'only-all':'only-sprint')){n.hidden=true;return}
+        if(n.dataset.variant&&n.dataset.variant!==variant)return;
         all++;var on;
-        if(n.classList.contains('readylist')){var any=false;n.querySelectorAll('button.key').forEach(function(k){
-            var hit=!q||about(sec.dataset.board,k.dataset.key).toLowerCase().indexOf(q)>=0;
-            k.hidden=!hit;if(hit)any=true});on=any}
+        if(n.classList.contains('readylist')){var any=!n.querySelector('button.key')&&!q;n.querySelectorAll('button.key').forEach(function(k){
+            var hit=!q||about(sec.dataset.board,k.dataset.key).toLowerCase().indexOf(q)>=0;k.hidden=!hit;if(hit)any=true});on=any}
         else{var keys=[].map.call(n.querySelectorAll('button.key'),function(k){return k.dataset.key});
           var inside=!set||n.classList.contains('summary')||!keys.length||keys.some(function(k){return set.has(k)});
-          on=inside&&(!q||words(sec,n).indexOf(q)>=0)}
+          var fresh=!recentOnly||!n.classList.contains('older');
+          on=inside&&fresh&&(!q||words(sec,n).indexOf(q)>=0)}
         n.hidden=!on;if(on){shown++;seen=true}});close()});
-    cnt.hidden=!(q||narrowed);cnt.textContent=shown+' of '+all+' shown'+(narrowed?', this sprint only':'')}
+    cnt.hidden=!(q||narrowed);cnt.textContent=shown+' of '+all+' shown'}
   f.addEventListener('input',apply);
-  document.querySelectorAll('.scope').forEach(function(sw){var k='hearthwood-scope-'+sw.dataset.board,v=null;
-    try{v=localStorage.getItem(k)}catch(e){}
-    function to(val){sw.dataset.on=val;sw.querySelectorAll('button[data-scope]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.scope===val))})}
-    sw.addEventListener('click',function(e){var b=e.target.closest('button[data-scope]');if(!b)return;to(b.dataset.scope);
-      try{localStorage.setItem(k,b.dataset.scope)}catch(x){}apply()});
-    to(v==='all'?'all':'sprint')});
+  function wire(sw,attr,dflt){var k='hearthwood-'+attr+'-'+sw.dataset.board,v=null;try{v=localStorage.getItem(k)}catch(e){}
+    function to(val){sw.dataset.on=val;sw.querySelectorAll('button[data-'+attr+']').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset[attr]===val))})}
+    sw.addEventListener('click',function(e){var b=e.target.closest('button[data-'+attr+']');if(!b)return;to(b.dataset[attr]);
+      try{localStorage.setItem(k,b.dataset[attr])}catch(x){}apply()});
+    to(v==='all'?'all':dflt)}
+  document.querySelectorAll('.sprintscope').forEach(function(sw){wire(sw,'scope','sprint')});
+  document.querySelectorAll('.timescope').forEach(function(sw){wire(sw,'time','recent')});
   apply()})();
 var TIP=document.getElementById('tip');
 function tipAt(t,x,y){TIP.textContent=t.dataset.tip;TIP.hidden=false;var w=TIP.offsetWidth;
@@ -413,6 +415,18 @@ def full_card(h, board, key):
                      b.settings.get("stats", {}).get("type_labels", []), criteria.last_decided(h, b.name), stubs=False)[key]
 
 
+def _recent_keys(items, fetched_at, days):
+    """The cards updated within `days` of the read."""
+    from .facts import parse_ts, days_between
+    now = parse_ts(fetched_at)
+    out = set()
+    for k, it in items.items():
+        t = parse_ts(it.get("updated") or "")
+        if now and t and days_between(t, now) <= days:
+            out.add(k)
+    return out
+
+
 def embed(obj):
     """JSON safe inside a script element: no "<" survives, so no text can close the element."""
     return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
@@ -477,10 +491,15 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
     parts.append(f"<p class='mute small'>Analysis {E(d.name)} of the read {E(facts['fetched_at'])}. "
                  + " ".join(E(n) for n in facts.get("notes", [])) + "</p>")
     sp = facts.get("sprint") or {}
+    days = int(b.settings["rules"].get("recent_days", 60))
+    recent = _recent_keys(items, facts["fetched_at"], days)
+    parts.append(f"<div class='scope timescope' data-board=\"{E(b.name)}\" role=group aria-label='How far back'>"
+                 f"<button type=button data-time=recent aria-pressed=true>Last {days} days</button>"
+                 "<button type=button data-time=all aria-pressed=false>All time</button></div>")
     if sp.get("keys"):
         names = " + ".join(s["name"] for s in sp["active"])
         ends = ", ".join(s["end"][:10] for s in sp["active"] if s.get("end"))
-        parts.append(f"<div class=scope data-board=\"{E(b.name)}\" role=group aria-label='What to show'>"
+        parts.append(f"<div class='scope sprintscope' data-board=\"{E(b.name)}\" role=group aria-label='What to show'>"
                      f"<button type=button data-scope=sprint aria-pressed=true>This sprint <span class=mute>{E(names)}"
                      + (f", ends {E(ends)}" if ends else "") + f" · {len(sp['keys'])} cards</span></button>"
                      "<button type=button data-scope=all aria-pressed=false>Everything</button></div>"
@@ -528,23 +547,26 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
         parts.append("<p class=mute>Facts only (no reading): <code>manager analyze</code> adds one.</p>")
     if facts["ready"]:
         inside = set(sp.get("keys") or [])
-        ready_in = [k for k in facts["ready"] if k in inside]
-        if inside:
-            parts.append(f"<h2>Ready to start <span class='mute small only-all'>{len(facts['ready'])}</span>"
-                         f"<span class='mute small only-sprint'>{len(ready_in)} in this sprint</span></h2>"
-                         f"<div class='card readylist only-all'>{_keys(facts['ready'], items, ref)}</div>"
-                         f"<div class='card readylist only-sprint'>"
-                         + (_keys(ready_in, items, ref, 100) if ready_in else "<span class=mute>nothing in this sprint is ready</span>")
+        variants = []
+        for scope in (["sprint", "all"] if inside else ["all"]):
+            for time in ("recent", "all"):
+                ks = [k for k in facts["ready"] if (scope == "all" or k in inside) and (time == "all" or k in recent)]
+                variants.append((f"{scope}-{time}", ks, ("in this sprint" if scope == "sprint" else "")
+                                 + (f"{' and ' if scope == 'sprint' else ''}touched in the last {days} days" if time == "recent" else "")))
+        parts.append("<h2>Ready to start " + "".join(
+            f"<span class='mute small' data-variant={v}>{len(ks)}{(' ' + what) if what else ''}</span>" for v, ks, what in variants) + "</h2>")
+        for v, ks, what in variants:
+            parts.append(f"<div class='card readylist' data-variant={v}>"
+                         + (_keys(ks, items, ref, 100 if v != "all-all" else 20) if ks else "<span class=mute>nothing ready here</span>")
                          + "</div>")
-        else:
-            parts.append(f"<h2>Ready to start <span class='mute small'>{len(facts['ready'])}</span></h2>"
-                         f"<div class='card readylist'>{_keys(facts['ready'], items, ref)}</div>")
-    parts.append("<h2>Findings</h2>")
-    for f in facts["findings"]:
-        if f["rule"] == "ready":
-            continue
+    shown = [f for f in facts["findings"] if f["rule"] != "ready"]
+    fresh = [f for f in shown if recent.intersection(f["keys"])]
+    old = [f for f in shown if not recent.intersection(f["keys"])]
+    parts.append(f"<h2>Findings <span class='mute small'>{len(fresh)} about cards touched in the last {days} days, "
+                 f"{len(old)} older</span></h2>")
+    for f in fresh + old:
         v = verdicts.get(f["id"])
-        parts.append(f"<details class=card><summary><span class=row><span class='badge {E(f['severity'])}'>{E(f['severity'])}</span>"
+        parts.append(f"<details class='card finding{'' if f in fresh else ' older'}'><summary><span class=row><span class='badge {E(f['severity'])}'>{E(f['severity'])}</span>"
                      f"<span>{_prose(f['title'], items, ref)}</span><span class=id>{E(f['id'])}</span>"
                      + (f"<span class='badge {E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
                      + f"</span></summary><p>{_prose(f['says'], items, ref)}</p><div class=keys>{_keys(f['keys'], items, ref)}</div>"
