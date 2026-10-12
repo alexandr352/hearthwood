@@ -502,8 +502,8 @@ class Analysis:
             out.append(f"{it.key} | " + (" | ".join(cells) if cells else "-"))
         return "\n".join(out) + "\n"
 
-    def to_markdown(self, verdicts=None):
-        verdicts = verdicts or {}
+    def to_markdown(self, verdicts=None, decided=None):
+        verdicts, decided = verdicts or {}, decided or {}
         f = self.flow
         out = [f"# Facts of board {self.board.name}", "",
                f"Read {self.board.fetched_at} from {self.board.source} {self.board.where}.", "",
@@ -524,28 +524,67 @@ class Analysis:
             v = verdicts.get(x.id)
             if v:
                 out.append(f"> earlier verdict: {v['verdict']}" + (f" — \"{v['why']}\"" if v.get("why") else ""))
+                since = [f"{k} ({n})" for k in x.keys if k in self.items
+                         for n in [len(new_comments(self.items[k], v.get("at")))] if n]
+                if since:
+                    out.append(f"> since that verdict, new comments on {', '.join(since)}: read them before relying on it")
             out.append("")
+        talk = []
+        for it in sorted(self.open_items(), key=lambda i: _num(i.key)):
+            new = new_comments(it, decided.get(it.key))
+            if new:
+                talk.append(f"- {it.key}: {count_of(len(new), 'new comment')} since your last decision on it "
+                            f"({decided[it.key][:10]})")
+        out += ["## Comments since your decisions", "",
+                "Open items with comments newer than the person's last decision about them. What was decided may "
+                "no longer hold; the comments are in items/<number>.md, marked NEW.", ""]
+        out += (talk or ["(none)"]) + [""]
         return "\n".join(out)
 
 
-def board_index(board, analysis):
+def board_index(board, analysis, decided=None):
     """One line per item, for the reading to search: key | state | column | type | title | ..."""
+    decided = decided or {}
     lines = ["# Every item on the board, one per line", "",
-             "key | state | column | type | parent | depends on | pull requests | labels | updated | title", ""]
+             "key | state | column | type | parent | depends on | pull requests | labels | comments | updated | title",
+             ""]
     for it in sorted(board.items, key=lambda i: _num(i.key)):
         deps = analysis.deps(it)
         prs = ",".join(f"{p.number or ''}:{p.state}" for p in it.prs)
+        new = len(new_comments(it, decided.get(it.key)))
+        talk = str(it.comments or len(it.thread)) + (f" ({new} new)" if new else "")
         lines.append(" | ".join([it.key, it.state + (f"/{it.close_reason}" if it.close_reason else ""),
                                  it.column or "-", it.kind or "-", it.parent or "-", ",".join(deps) or "-",
-                                 prs or "-", ",".join(it.labels) or "-", it.updated[:10], it.title]))
+                                 prs or "-", ",".join(it.labels) or "-", talk, it.updated[:10], it.title]))
     return "\n".join(lines) + "\n"
+
+
+def new_comments(it, since):
+    """The comments of `it` written after `since` (an ISO time); none when nothing was decided about it yet."""
+    if not since:
+        return []
+    return [c for c in it.thread if c.at > since]
+
+
+def board_logins(board):
+    """Every login the board shows: assignees and the authors of comments."""
+    return {a for it in board.items for a in list(it.assignees) + [c.author for c in it.thread] if a}
+
+
+def without_people(text, logins):
+    """`text` with every known login made "someone": as an @mention always, and as a bare word from three
+    letters up, the words the reading's contract refuses to see in an answer."""
+    for login in sorted(logins, key=len, reverse=True):
+        at = "@?" if len(login) >= 3 else "@"
+        text = re.sub(r"(?<![\w-])(" + at + ")" + re.escape(login) + r"(?![\w-])", r"\1someone", text, flags=re.I)
+    return text
 
 
 def item_file_name(key):
     return re.sub(r"[^A-Za-z0-9._-]", "_", key.lstrip("#")) + ".md"
 
 
-def item_markdown(it, people):
+def item_markdown(it, people, decided_at=None, logins=()):
     head = [f"# {it.key}: {it.title}", "",
             f"- state: {it.state}" + (f" ({it.close_reason})" if it.close_reason else ""),
             f"- column: {it.column or '-'} (from {it.column_source or '-'})",
@@ -560,4 +599,26 @@ def item_markdown(it, people):
         head.append(f"- assignees: {', '.join(it.assignees) or '-'}")
     if it.history:
         head.append("- column history: " + "; ".join(f"{h['at'][:10]} {h['from'] or '-'} -> {h['to'] or '-'}" for h in it.history))
-    return "\n".join(head) + "\n\n## Description\n\n" + (it.body.strip() or "(empty)") + "\n"
+    out = "\n".join(head) + "\n\n## Description\n\n" + (it.body.strip() or "(empty)") + "\n"
+    if it.thread:
+        out += _comments_markdown(it, people, decided_at)
+    return out if people else without_people(out, logins)
+
+
+def _comments_markdown(it, people, decided_at):
+    shown = len(it.thread)
+    lines = ["", "## Comments", ""]
+    if it.comments > shown:
+        lines.append(f"The last {shown} of {it.comments}; the {it.comments - shown} before them were not read.")
+    if decided_at:
+        lines.append(f"The person last decided about this item on {decided_at[:10]}. Comments after that are marked NEW: "
+                     "they may change what was decided.")
+    else:
+        lines.append("The person has not decided anything about this item yet.")
+    lines += ["Newest first.", ""]
+    for c in reversed(it.thread):
+        who = (c.author or "someone") if people else "someone"
+        new = " · NEW" if decided_at and c.at > decided_at else ""
+        when = c.at[:10] if c.at[10:19] in ("", "T00:00:00") else c.at[:16].replace("T", " ")
+        lines += [f"### {when} · {who}{new}", "", c.body.strip() or "(empty)", ""]
+    return "\n".join(lines).rstrip() + "\n"

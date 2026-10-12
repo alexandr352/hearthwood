@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.8.0 — 2026-10-12
+
+- **Comments are read.** The newest 20 comments of every issue, with when and by whom, and how
+  many there are in all; a markdown board's tickets take a `## Comments` section. They are at the
+  end of every item file, newest first, and the reading is told to read them before it judges an item: a comment
+  often says what a card waits on, that its scope changed, or that the work was done elsewhere.
+- **Comments since your decisions.** Your last decision on an item is the newest verdict, answer
+  or approval that names it. Comments after it are marked NEW in the item file and "new since your
+  decision" in the card panel; `board.md` counts them; an earlier verdict in `facts.md` says when
+  comments have come on its items since; and `facts.md` closes with the open items that have them.
+- **People stay out of comments too.** With `people = false`, a comment's author is "someone";
+  anyone on the board named in a description or a comment, as an @mention or a bare login, reads
+  "someone" (in item files and on the page); and the reading's contract refuses an answer that
+  names a comment's author.
+- The demo board has comments on LAN-7 and LAN-12.
+
 ## 0.7.1 — 2026-10-11
 
 - **The spirit knows the page.** Its instructions say it may be talked to on the page, what the

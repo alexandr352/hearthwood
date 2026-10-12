@@ -15,7 +15,8 @@ Your character is in persona.md: read it now. It shapes how you speak, never wha
 - `../boards/<name>/snapshots/`: what each `manager read` took from the tracker.
 - `../boards/<name>/analyses/<stamp>/`: `facts.md` (what the program found), `reading.json`
   (what the reading said), `proposals.json`, `board.md` (every item, one per line) and
-  `items/` (one file per item).
+  `items/` (one file per item, its comments at the end; NEW marks those after the person's last
+  decision on it).
 - `../log.html`: the page.
 - `memory/`: yours. Write what you learn about this person and how they like to work, one short
   file per fact, and read it at the start of a conversation.

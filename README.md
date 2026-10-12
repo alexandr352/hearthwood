@@ -32,7 +32,8 @@ development tickets. Hearthwood looks after the board those tickets live on.
   ([why full-text search](docs/experiments/duplicate-search.md)). Each fact comes with an id
   and a sentence saying why. [How it works](docs/how-it-works.md) lists every rule.
 - **Has Claude read it once.** The reading gets the facts and your criteria. It may open any
-  ticket in the snapshot. It says what needs your attention, most important first. It asks what
+  ticket in the snapshot, and reads a ticket's comments before judging it; comments that came
+  after your last decision on a ticket are marked new. It says what needs your attention, most important first. It asks what
   the board cannot tell it, and proposes changes. Its answer is checked by code: every ticket it
   names must exist, and every fact it cites must be real. An answer that fails goes back to the
   same session with the problem named.

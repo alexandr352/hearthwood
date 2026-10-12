@@ -34,6 +34,17 @@ def latest_by_target(h, board):
     return out
 
 
+def last_decided(h, board):
+    """{item key: when the person last decided anything about it}: the newest verdict, answer or approval
+    whose point names the item. Comments after that moment are what the person has not weighed yet."""
+    out = {}
+    for r in all_verdicts(h, board):
+        for k in r.get("keys") or []:
+            if r.get("at", "") > out.get(k, ""):
+                out[k] = r["at"]
+    return out
+
+
 def resolve(d, target):
     """(kind, rule, keys, text) for a target in analysis folder `d`: a finding id, A<n>, Q<n> or P<n>."""
     facts = json.loads((d / "facts.json").read_text(encoding="utf-8"))

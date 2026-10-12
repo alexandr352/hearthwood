@@ -9,8 +9,10 @@ something said about a person.
 - **Assignees are off by default.** With `people = false`, the setting in every new board's
   `board.toml`:
   - no finding names a person
-  - no item file the reading can open lists an assignee
-  - the reading's contract refuses an answer that names one
+  - no item file the reading can open lists an assignee or says who wrote a comment
+  - anyone on the board who is named in a description or a comment, as an @mention or as their
+    bare login, reads "someone", in the item files and on the page
+  - the reading's contract refuses an answer that names an assignee or the author of a comment
 - **Load, never a score.** With `people = true`, one rule (`load`) appears. It flags a person
   holding more than `person_wip` items in progress or review at once, because too much at once
   slows every item. Nothing in hearthwood measures, ranks or compares how much anyone finishes,
@@ -44,7 +46,7 @@ everything it reads goes to Anthropic under your Claude account, as in any Claud
 
 - the facts, which include ticket keys, titles and some sentences about them
 - your criteria
-- whichever ticket files it chooses to open, which hold titles and descriptions
+- whichever ticket files it chooses to open, which hold titles, descriptions and comments
 
 Whether your organization allows ticket text to go to Claude is your organization's decision.
 `manager analyze --facts-only` sends nothing.

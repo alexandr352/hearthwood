@@ -11,7 +11,7 @@ import json
 import re
 from pathlib import Path
 
-from . import claude, facts, fence, home
+from . import claude, criteria, facts, fence, home
 
 ACTIONS = ("comment", "link", "unlink", "move", "label", "close", "reopen", "split", "merge", "ask")
 ASKS = ("you", "scope", "product", "engineering")
@@ -133,12 +133,15 @@ def prepare(b, board, analysis, verdicts):
         d = b.analyses / f"{home.stamp()}-{n}"
     (d / "items").mkdir(parents=True)
     people = bool(b.settings["rules"].get("people"))
+    decided = criteria.last_decided(b.home, b.name)
+    logins = facts.board_logins(board)
     (d / "facts.json").write_text(json.dumps(analysis.to_dict(), indent=1, ensure_ascii=False), encoding="utf-8")
-    (d / "facts.md").write_text(analysis.to_markdown(verdicts), encoding="utf-8")
-    (d / "board.md").write_text(facts.board_index(board, analysis), encoding="utf-8")
+    (d / "facts.md").write_text(analysis.to_markdown(verdicts, decided), encoding="utf-8")
+    (d / "board.md").write_text(facts.board_index(board, analysis, decided), encoding="utf-8")
     (d / "similar.md").write_text(analysis.similar_markdown(), encoding="utf-8")
     for it in board.items:
-        (d / "items" / facts.item_file_name(it.key)).write_text(facts.item_markdown(it, people), encoding="utf-8")
+        (d / "items" / facts.item_file_name(it.key)).write_text(
+            facts.item_markdown(it, people, decided.get(it.key), logins), encoding="utf-8")
     crit = b.home / "criteria.md"
     (d / "criteria.md").write_text(crit.read_text(encoding="utf-8") if crit.exists() else "(none yet)\n", encoding="utf-8")
     (d / "CLAUDE.md").write_text(home.doctrine("analyst", "CLAUDE.md"), encoding="utf-8")
@@ -155,7 +158,8 @@ def mission(d):
         SCHEMA,
         "",
         "board.md in this folder lists every item, one per line; items/<number>.md holds one item whole. Read "
-        "what you need to be sure; cite only keys that exist. similar.md lists, for every open item, the items "
+        "what you need to be sure; cite only keys that exist. An item's file ends with its comments, newest first; "
+        "read them before you judge the item. similar.md lists, for every open item, the items "
         "that read most like it: candidates for duplicates and for work already done, never verdicts.",
         "",
         "=== criteria.md (the person's own criteria; they outrank your defaults) ===",
@@ -175,7 +179,7 @@ def run(b, d, board, analysis, claude_bin=None, model=None):
     timeout = int(cfg["timeouts"].get("reading", 900))
     keys = set(board.by_key())
     fids = {f.id for f in analysis.findings}
-    logins = {a for it in board.items for a in it.assignees}
+    logins = facts.board_logins(board)
     people = bool(b.settings["rules"].get("people"))
     settings = fence.settings_for()
     settings["claudeMdExcludes"] = claude.doctrine_excludes(d)

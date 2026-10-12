@@ -98,6 +98,20 @@ class Page(unittest.TestCase):
         worklog.build(self.t.h)
         self.assertEqual(embedded((self.t.h / "log.html").read_text())["demo"]["LAN-7"]["assignees"], ["sam"])
 
+    def test_comments_reach_the_panel_without_people(self):
+        page = self.build()
+        talk = embedded(page)["demo"]["LAN-7"]["thread"]
+        self.assertEqual(len(talk), 2)
+        self.assertNotIn("author", talk[0])
+        self.assertIn("@someone and I agreed", talk[1]["body"])
+        self.assertFalse(any(m["new"] for m in talk))
+        toml = self.t.h / "boards" / "demo" / "board.toml"
+        toml.write_text(toml.read_text().replace("people = false", "people = true"))
+        worklog.build(self.t.h)
+        talk = embedded((self.t.h / "log.html").read_text())["demo"]["LAN-7"]["thread"]
+        self.assertEqual(talk[1]["author"], "sam")
+        self.assertIn("@ana", talk[1]["body"])
+
     def test_the_page_says_what_to_do_next(self):
         page = self.build()
         self.assertIn("<span class=nlabel>next</span><code>manager review -b demo</code>", page)

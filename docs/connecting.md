@@ -62,11 +62,11 @@ For every open issue, and every issue closed within `closed_days`, hearthwood re
 - the labels and the milestone
 - the parent and sub-issues, and the "blocked by" and "blocking" links
 - the pull requests that close it
-- the dates, the description, the number of comments, and the last 40 status changes
+- the dates, the description, and the last 40 status changes
+- the newest 20 comments, with when and by whom, and how many there are in all
 
-Assignees are read too, but they are only shown when the board has `people = true`.
-
-Comments themselves are not read in this version.
+Assignees and the authors of comments are read too, but they are only shown when the board has
+`people = true`.
 
 ## A folder of markdown files
 
@@ -92,10 +92,16 @@ closed:                  # a date once it is finished
 close_reason:            # completed | not_planned | duplicate
 ---
 What the ticket is about.
+
+## Comments
+
+### 2026-10-02 sam
+A comment: a date, optionally who wrote it, and the text below.
 ```
 
 An optional `_board.md` names the columns in order: `columns: [Backlog, Todo, In Progress, In Review, Done]`.
-A ticket in a done column is closed unless it says `state: open`. The demo board in
+A ticket in a done column is closed unless it says `state: open`. A `## Comments` heading ends the
+description; each `### <date> [who]` under it starts one comment. The demo board in
 `examples/demo-board` uses this format.
 
 ## Jira (planned)

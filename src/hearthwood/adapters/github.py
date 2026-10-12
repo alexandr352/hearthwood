@@ -3,8 +3,8 @@
 Read-only. Every request is a GraphQL query; nothing here can write. Two levels of access:
 
   issues   the token reads the repository's issues: titles, labels, sub-issues, "blocked by"
-           links, linked pull requests and the history of status changes. Each issue's column
-           is then its LAST status change, and the snapshot says so.
+           links, linked pull requests, the newest comments and the history of status changes.
+           Each issue's column is then its LAST status change, and the snapshot says so.
   board    the token also reads the Projects board: the column comes from the board itself,
            and so does the board's order. A fine-grained token needs the owner's permission
            "Projects: read" for this (an organization permission when an organization owns it).
@@ -16,16 +16,17 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from ..model import Board, Item, PullRequest
+from ..model import Board, Comment, Item, PullRequest
 
 API = "https://api.github.com/graphql"
 PAGE = 25
+COMMENTS = 20               # the newest comments of each issue; the count says how many there are in all
 
 ISSUE_FIELDS = """
   number title url state stateReason createdAt updatedAt closedAt body
   issueType { name }
   milestone { title }
-  comments { totalCount }
+  comments(last: %d) { totalCount nodes { createdAt url body author { login } } }
   labels(first: 30) { nodes { name } }
   assignees(first: 10) { nodes { login } }
   parent { number repository { nameWithOwner } }
@@ -49,7 +50,7 @@ query($owner: String!, $repo: String!, $states: [IssueState!], $after: String) {
   }
   rateLimit { cost remaining resetAt }
 }
-""" % (PAGE, ISSUE_FIELDS)
+""" % (PAGE, ISSUE_FIELDS % COMMENTS)
 
 # A list cut by the first page above (a goal with more than 50 sub-items) is read on, 100 at a time,
 # so a count never stops silently at the page size.
@@ -172,6 +173,15 @@ def _history(timeline):
     return sorted(out, key=lambda h: h["at"])
 
 
+def _thread(comments):
+    out = []
+    for c in (comments or {}).get("nodes") or []:
+        if c:
+            out.append(Comment(at=c.get("createdAt") or "", author=((c.get("author") or {}).get("login") or ""),
+                               body=c.get("body") or "", url=c.get("url") or ""))
+    return sorted(out, key=lambda c: c.at)
+
+
 def issue_to_item(n, home_repo):
     prs = []
     for p in (n.get("closedByPullRequestsReferences") or {}).get("nodes") or []:
@@ -195,7 +205,8 @@ def issue_to_item(n, home_repo):
         prs=prs, created=_iso(n.get("createdAt")), updated=_iso(n.get("updatedAt")),
         closed=_iso(n.get("closedAt")), close_reason=reason if n.get("state") == "CLOSED" else "",
         milestone=((n.get("milestone") or {}).get("title") or ""), body=n.get("body") or "",
-        comments=((n.get("comments") or {}).get("totalCount") or 0), history=history)
+        comments=((n.get("comments") or {}).get("totalCount") or 0), thread=_thread(n.get("comments")),
+        history=history)
 
 
 def read_issues(gh, owner, repo, closed_days, now=None, progress=None):

@@ -14,6 +14,7 @@ import json
 import re
 
 from . import __version__, criteria, guide, home, reading, stats
+from . import facts as facts_mod
 from .model import Board
 
 CSS = """
@@ -63,6 +64,8 @@ box-shadow:-4px 0 24px rgba(0,0,0,.18);transform:translateX(105%);transition:tra
 #panel dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;font-size:13px;margin:12px 0}
 #panel dt{color:var(--mute)}#panel dd{margin:0;overflow-wrap:anywhere}
 #panel .desc{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+#panel .talk .desc{border-top:0;padding-top:4px;margin-top:0}#panel .talk{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
+#panel .badge.new{margin-left:6px;color:var(--amber);border-color:var(--amber)}
 #panel h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:16px 0 4px}
 .tabs{display:flex;align-items:baseline;gap:4px;margin:14px 0 4px;border-bottom:1px solid var(--line)}
 .tabs button{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:6px 12px 8px;color:var(--mute);font:14px var(--font);cursor:pointer}
@@ -158,7 +161,12 @@ function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board
       c.similar.forEach(function(m,i){if(i)ul.appendChild(txt(' · '));var o=card(b,m[0]);
         ul.appendChild(key(b,m[0],' '+Number(m[1]).toFixed(2)+(o&&o.state&&o.state!=='open'?' ('+o.state+')':'')))});
       P.appendChild(ul);P.appendChild(el('p','mute small','A search, not a verdict: close matches are often related work.'))}
-    P.appendChild(el('h3',null,'Description'));P.appendChild(linked(b,(c.body||'').trim()||'(empty)'))}
+    P.appendChild(el('h3',null,'Description'));P.appendChild(linked(b,(c.body||'').trim()||'(empty)'));
+    if(c.thread&&c.thread.length){P.appendChild(el('h3',null,'Comments'+(c.comments>c.thread.length?' · the last '+c.thread.length+' of '+c.comments:'')));
+      c.thread.forEach(function(m){var t=el('div','talk');var w=String(m.at||'');w=w.slice(10,19)==='T00:00:00'?w.slice(0,10):w.slice(0,16).replace('T',' ');
+        t.appendChild(el('div','mute small',w+(m.author?' · '+m.author:'')));
+        if(m.new)t.firstChild.appendChild(el('span','badge new','new since your decision'));
+        t.appendChild(linked(b,(m.body||'').trim()||'(empty)'));P.appendChild(t)})}}
   if(/^https?:\/\//.test(c.url||'')){var a=el('a',null,/^https:\/\/github\.com\//.test(c.url)?'Open on GitHub':'Open in the tracker');
     a.href=c.url;a.rel='noopener';var pp=el('p','small');pp.appendChild(a);P.appendChild(pp)}
   if(document.getElementById('chat')){var ask=el('button','ask','Discuss this card with Spirit');ask.type='button';
@@ -274,9 +282,14 @@ def _type(it, patterns):
     return it.get("kind") or ""
 
 
-def card_data(items, ref, similar, people, type_patterns=()):
+def card_data(items, ref, similar, people, type_patterns=(), decided=None):
     """What the panel shows: the cards in `ref` whole, every other card on the board as a stub, so any card
-    number the panel meets, in a field or in a description, opens something."""
+    number the panel meets, in a field or in a description, opens something. With people off, a comment
+    carries no author and anyone on the board named in a description or a comment reads "someone"."""
+    decided = decided or {}
+    logins = {a for it in items.values() for a in list(it.get("assignees") or [])
+              + [c.get("author") for c in it.get("thread") or []] if a}
+    clean = (lambda t: t) if people else (lambda t: facts_mod.without_people(t, logins))
     cards = {}
     for k in sorted(ref):
         it = items[k]
@@ -288,6 +301,13 @@ def card_data(items, ref, similar, people, type_patterns=()):
         c["type"] = _type(it, type_patterns)
         if people:
             c["assignees"] = it.get("assignees") or []
+        else:
+            c["body"] = clean(c.get("body") or "")
+        since = decided.get(k)
+        c["thread"] = [dict({"at": x.get("at") or "", "body": clean(x.get("body") or ""),
+                             "new": bool(since and (x.get("at") or "") > since)},
+                            **({"author": x.get("author") or ""} if people else {}))
+                       for x in it.get("thread") or []]
         cards[k] = c
     for k in sorted(set(items) - set(cards)):
         it = items[k]
@@ -419,7 +439,7 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
     people = bool(b.settings["rules"].get("people"))
     ref |= {k for k in extra_ref if k in items}
     cards = card_data(items, ref, facts.get("similar") or {}, people,
-                      b.settings.get("stats", {}).get("type_labels", []))
+                      b.settings.get("stats", {}).get("type_labels", []), criteria.last_decided(h, b.name))
     parts.append(f"<script type=application/json class=cards data-board=\"{E(b.name)}\">{embed(cards)}</script>")
     return parts
 

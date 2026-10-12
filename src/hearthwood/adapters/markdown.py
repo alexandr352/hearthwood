@@ -17,6 +17,11 @@
     ---
     The ticket's text.
 
+    ## Comments
+
+    ### 2026-10-02 sam
+    A comment: a date, optionally who wrote it, and the text below.
+
 An optional `_board.md` in the folder names the columns in order: `columns: [Backlog, Todo, ...]`.
 It is the demo board's format, and a way to try hearthwood on a board you write by hand.
 """
@@ -25,9 +30,11 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..model import Board, Item, PullRequest
+from ..model import Board, Comment, Item, PullRequest
 
 FRONT = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.S)
+COMMENTS = re.compile(r"^## Comments[ \t]*$", re.M)
+COMMENT = re.compile(r"^### (\d{4}-\d{2}-\d{2})(?:[ \t]+(\S+))?[ \t]*$", re.M)
 
 
 def parse_value(raw):
@@ -50,6 +57,20 @@ def parse(text):
         k, _, v = line.partition(":")
         meta[k.strip().lower()] = parse_value(v)
     return meta, m.group(2)
+
+
+def split_comments(body):
+    """(description, [Comment]): a `## Comments` heading ends the description; each `### <date> [who]` under
+    it starts one comment."""
+    m = COMMENTS.search(body)
+    if not m:
+        return body, []
+    rest, out = body[m.end():], []
+    heads = list(COMMENT.finditer(rest))
+    for n, h in enumerate(heads):
+        end = heads[n + 1].start() if n + 1 < len(heads) else len(rest)
+        out.append(Comment(at=_date(h.group(1)), author=h.group(2) or "", body=rest[h.end():end].strip()))
+    return body[:m.start()], out
 
 
 def _list(v):
@@ -79,6 +100,7 @@ def read_board(name, folder, done_columns=("Done",), now=None):
         if p.name.startswith("_"):
             continue
         meta, body = parse(p.read_text(encoding="utf-8"))
+        body, thread = split_comments(body)
         key = meta.get("key") or p.stem
         status = meta.get("status") or None
         closed = _date(meta.get("closed"))
@@ -93,7 +115,7 @@ def read_board(name, folder, done_columns=("Done",), now=None):
             parent=meta.get("parent") or None, blocked_by=_list(meta.get("blocked_by")),
             prs=prs, created=_date(meta.get("created")), updated=_date(meta.get("updated")) or _date(meta.get("created")),
             closed=closed, close_reason=(meta.get("close_reason") or ("completed" if state == "closed" else "")),
-            milestone=meta.get("milestone") or "", body=body.strip()))
+            milestone=meta.get("milestone") or "", body=body.strip(), comments=len(thread), thread=thread))
     keys = {i.key: i for i in board.items}
     for it in board.items:
         if it.parent in keys:

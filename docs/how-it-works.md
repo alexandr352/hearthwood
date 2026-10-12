@@ -13,7 +13,7 @@ for everyone; the reading is yours.
 
 An adapter reads the tracker and returns one shape for every tracker: items with a key, title,
 state, column, labels, parent and sub-items, "blocked by" links, linked pull requests, dates,
-description and column history. It is stored as
+description, comments and column history. It is stored as
 `~/.hearthwood/boards/<board>/snapshots/<stamp>.json`.
 
 The snapshot holds every open item. It also holds the closed items updated in the last
@@ -24,6 +24,10 @@ The snapshot holds every open item. It also holds the closed items updated in th
 than in a field. A line that starts with "Depends on", "Blocked by", "Requires" or "Waits for"
 counts, and so do the lines after it up to a blank one. Every item key on those lines that is
 also on the board becomes a dependency. The item files mark these as "written dependencies".
+
+**Comments are read, the newest 20 of each item.** The count says how many there are in all, and
+an item file whose thread was cut says how many earlier comments were not read. Comments are
+not searched for duplicates: the search reads titles and descriptions.
 
 **What could not be read is said.** It is listed under "What could not be read" in `facts.md`
 and on the page, and it is never treated as fine. For example, a token that cannot read the
@@ -99,7 +103,7 @@ Beside the rules, `flow` gives numbers rather than findings:
 | `facts.json`, `facts.md` | the findings and flow, for programs and for people |
 | `board.md` | every item, one per line |
 | `similar.md` | for every open item, the items whose titles and descriptions read most like it: candidates, never verdicts |
-| `items/` | one file per item, with its description and column history |
+| `items/` | one file per item, with its description, column history and comments |
 | `criteria.md` | a copy of your criteria as they were for this reading |
 | `CLAUDE.md` | the reading's instructions ([source](../src/hearthwood/doctrine/analyst/CLAUDE.md)) |
 | `mission.md`, `answer-N.txt`, `reading.json` | what the reading was asked, every answer, the accepted one |
@@ -115,7 +119,16 @@ The reading is one Claude Code session, started in the analysis folder:
 - **Instructions:** only its own `CLAUDE.md`. Your global Claude Code instructions and any
   `CLAUDE.md` in parent folders are excluded, so a reading behaves the same on every machine.
 - **Mission:** your criteria and the facts, whole, never cut short. It also has the item files to
-  open as it needs.
+  open as it needs, and is told to read an item's comments before judging it.
+
+**Comments since your decisions.** A comment can say what a card waits on, that its scope changed,
+or that the work was done elsewhere, and it may have come after you decided something about the
+card. Your last decision on an item is the newest verdict, answer or approval whose point names
+it. In the item file, where comments are newest first so a long thread starts with what is recent,
+every comment after that moment is marked NEW. In `facts.md`, an earlier
+verdict on a finding says when new comments have come on its items since, and a closing section
+lists the open items with comments newer than your last decision on them. An item you have never
+decided about has no NEW comments: nothing was decided that they could change.
 
 It answers with one JSON object:
 
@@ -134,7 +147,7 @@ It answers with one JSON object:
 - the shape and the lengths
 - that every key it cites is on the board
 - that every finding id it cites is in the facts
-- with `people = false`, that it names no assignee
+- with `people = false`, that it names no assignee and no author of a comment
 
 A broken answer goes back **to the same session**, with each deviation named. The session already
 holds the mission and its own answer, so only what is wrong is sent. After `reconsider` tries
@@ -169,7 +182,8 @@ proposal's state.
 **Every card number opens the card** in a panel on the right, 400 px wide: its state, column,
 type and labels;
 its parent, sub-items, dependencies and pull requests, each clickable in turn; its dates; the
-cards it reads most like; its description; and a link to the card in the tracker. On a screen
+cards it reads most like; its description; its comments, those after your last decision on it
+marked "new since your decision"; and a link to the card in the tracker. On a screen
 1100 px wide or more the page makes room beside the panel, so both can be read side by side; on
 a narrower one the panel covers the page. ✕, Esc or the browser's Back button closes the panel, and
 so does a click outside it when it covers the page. Each open card has its own address
@@ -182,12 +196,13 @@ points, questions and proposals, and in a finding. It must be a card on the boar
 like one, stays text.
 
 The page carries the cards it mentions whole, and every other card on the board as its title,
-state and column, so any card number opens something. On a board of 728 cards it carried 124
-whole and 604 as titles, and the page weighed 723 KB.
+state and column, so any card number opens something. On a board of 728 cards it carried 131
+whole, with their 33 comments, and 597 as titles, and the page weighed 981 KB.
 
 A card's text is shown, never run: the panel builds every line with plain text and no HTML, and
-the embedded cards are escaped so that no card can close the element that holds them. Assignees
-are not on the page unless the board has `people = true`.
+the embedded cards are escaped so that no card can close the element that holds them. Assignees and
+the authors of comments are not on the page unless the board has `people = true`, and anyone on
+the board named in a description or a comment reads "someone".
 
 ### Three tabs
 

@@ -18,6 +18,14 @@ class PullRequest:
 
 
 @dataclass
+class Comment:
+    at: str                 # ISO 8601, UTC
+    author: str = ""        # a login; shown only when the board has people = true
+    body: str = ""
+    url: str = ""
+
+
+@dataclass
 class Item:
     key: str                # how people name it: "#92" on GitHub, "LAN-12" in a markdown board
     title: str
@@ -39,7 +47,8 @@ class Item:
     close_reason: str = ""  # completed | not_planned | duplicate | "" when open or unknown
     milestone: str = ""
     body: str = ""
-    comments: int = 0
+    comments: int = 0       # how many there are on the tracker
+    thread: list = field(default_factory=list)       # Comment, oldest first: the last COMMENTS_READ when there are more
     history: list = field(default_factory=list)      # [{"at": iso, "from": column, "to": column}]
     fields: dict = field(default_factory=dict)       # any other field the board carries
 
@@ -66,6 +75,7 @@ class Board:
         for raw in d.get("items", []):
             raw = dict(raw)
             raw["prs"] = [PullRequest(**p) for p in raw.get("prs", [])]
+            raw["thread"] = [Comment(**c) for c in raw.get("thread", [])]
             items.append(Item(**raw))
         return cls(name=d["name"], source=d["source"], where=d.get("where", ""), fetched_at=d["fetched_at"],
                    columns=list(d.get("columns", [])), items=items, notes=list(d.get("notes", [])))
