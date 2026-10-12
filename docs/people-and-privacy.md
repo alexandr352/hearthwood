@@ -67,6 +67,8 @@ you wrote them, and a reason can still name something you would rather not share
 
 ## Deleting
 
-- Delete a board's folder under `~/.hearthwood/boards/` to forget the board.
+- `manager disconnect <board>` forgets one board: its copies, its settings and its token or Jira
+  sign-in. Your criteria and verdicts stay.
 - Delete `~/.hearthwood` to forget everything.
-- Revoke the token on GitHub when you stop using hearthwood.
+- Revoke the token on GitHub when you stop using hearthwood; for Jira, remove hearthwood under
+  Connected apps in your Atlassian account.

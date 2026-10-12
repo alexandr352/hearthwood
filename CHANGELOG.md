@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.4 — 2026-10-12
+
+- **`manager disconnect <board>`** removes a board from this computer: its snapshots, analyses,
+  settings, and its token or Jira sign-in. It asks first (`--yes` skips the question). Your
+  criteria and verdicts stay, and nothing changes on the board itself. For Jira it says where to
+  withdraw the permission at Atlassian too. The guide mentions it after the demo.
+
 ## 0.9.3 — 2026-10-12
 
 - **The Jira sign-in asks for `read:project:jira` too.** Jira Software's board endpoints take

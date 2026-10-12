@@ -296,6 +296,37 @@ def cmd_connect_markdown(args):
     return 0
 
 
+def cmd_disconnect(args):
+    """Forget one board: its folder (snapshots, analyses, settings) and its token or Jira sign-in. Your
+    criteria and your verdicts stay: they are how you judge, not the board."""
+    b = home.resolve_board(args.board)
+    snaps = len(list(b.snapshots.glob("*.json"))) if b.snapshots.exists() else 0
+    analyses = len([p for p in b.analyses.iterdir() if p.is_dir()]) if b.analyses.exists() else 0
+    secrets_ = [p for p in (credentials.token_path(b), jira_auth.grant_path(b)) if p.exists()]
+    out(f"board {b.name} ({b.source} {b.where}): {count(snaps, 'snapshot')}, {count(analyses, 'analysis', 'analyses')}"
+        + (", and its sign-in" if secrets_ else ""))
+    if not args.yes:
+        if not sys.stdin.isatty():
+            return fail("nothing removed: add --yes to remove it without being asked")
+        if input("Remove it from this computer? Nothing on the board itself changes. [y/N] ").strip().lower() not in ("y", "yes"):
+            out("nothing removed")
+            return 0
+    for p in secrets_:
+        p.unlink()
+    shutil.rmtree(b.dir)
+    rebuild_log()
+    out(f"board {b.name} removed. Your criteria and verdicts stay.")
+    if b.source == "jira":
+        out("  To withdraw hearthwood's permission at Atlassian too: your Atlassian account, Connected apps.")
+    elif b.source == "github" and b.settings.get("token", "credentials") == "credentials":
+        out("  If no other board uses that GitHub token, revoke it on GitHub.")
+    return 0
+
+
+def count(n, word, plural=None):
+    return f"{n} {word if n == 1 else plural or word + 's'}"
+
+
 def cmd_boards(args):
     bs = home.boards()
     if not bs:
@@ -678,6 +709,10 @@ def parser():
     m.add_argument("--board", required=True)
     m.set_defaults(fn=cmd_connect_markdown)
     cmd("boards", cmd_boards, "list the connected boards", board=False)
+    dc = sub.add_parser("disconnect", help="remove a board from this computer (its copies and its sign-in); the board itself is untouched")
+    dc.add_argument("board", help="the board's name, as `manager boards` lists it")
+    dc.add_argument("--yes", action="store_true", help="do not ask first")
+    dc.set_defaults(fn=cmd_disconnect)
     cmd("read", cmd_read, "take a snapshot of the board (reads only; no model is called)")
     a = cmd("analyze", cmd_analyze, "compute the facts, then one reading by Claude")
     a.add_argument("--facts-only", action="store_true", help="the facts alone; no model call, no cost")

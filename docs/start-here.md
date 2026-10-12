@@ -98,7 +98,8 @@ manager ui
 The last command opens a page in your browser. Look around: **Active** is what needs attention,
 **All** is every card, **Stats** is the numbers. Click any card number to read the card.
 
-To stop the page, go back to Terminal and press **Ctrl+C**.
+To stop the page, go back to Terminal and press **Ctrl+C**. When you no longer want the demo on
+your page: `manager disconnect demo`.
 
 ## 5. Install Claude Code (for the reading and the chat)
 
@@ -222,6 +223,8 @@ the home, not in the program.
 - More in [People and privacy](people-and-privacy.md).
 
 ## Removing it
+
+One board: `manager disconnect <name>` (it asks first). Everything:
 
 ```sh
 uv tool uninstall hearthwood

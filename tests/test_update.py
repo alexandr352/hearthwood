@@ -69,6 +69,31 @@ class Update(unittest.TestCase):
         self.assertNotEqual(manager("update")[0], 0)
 
 
+class Disconnect(unittest.TestCase):
+    def test_it_removes_the_board_and_its_sign_in_and_keeps_the_verdicts(self):
+        from hearthwood import criteria, jira_auth
+        with TempHome() as t:
+            manager("connect", "demo")
+            manager("analyze", "--facts-only")
+            b = home.BoardHome("demo", t.h)
+            jira_auth.save_grant(b, {"access_token": "A"})          # any sign-in file goes with it
+            home.append_jsonl(criteria.verdicts_path(t.h), {"at": "2026-10-12T00:00:00Z", "board": "demo", "keys": []})
+            code, text = manager("disconnect", "demo")             # not a terminal: refuses without --yes
+            self.assertNotEqual(code, 0)
+            self.assertTrue(b.dir.exists())
+            code, text = manager("disconnect", "demo", "--yes")
+            self.assertEqual(code, 0, text)
+            self.assertIn("1 snapshot, 1 analysis, and its sign-in", text)
+            self.assertFalse(b.dir.exists())
+            self.assertFalse(jira_auth.grant_path(b).exists())
+            self.assertTrue(criteria.verdicts_path(t.h).exists())
+            self.assertNotIn("demo", (t.h / "log.html").read_text().split("<main>")[1][:4000])
+
+    def test_an_unknown_board(self):
+        with TempHome():
+            self.assertNotEqual(manager("disconnect", "nope", "--yes")[0], 0)
+
+
 class Demo(unittest.TestCase):
     def test_the_demo_ships_inside_the_package(self):
         with TempHome() as t:
