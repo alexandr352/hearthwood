@@ -76,11 +76,22 @@ duplicate_search = "full-text"               # full-text (title and description)
 duplicate_match = 0.5                        # 0..1, how closely two items must read alike (full-text)
 duplicate_candidates = 5                     # closest matches kept per item, for the reading
 duplicate_similarity = 0.7                   # 0..1, how alike two open titles must be (titles)
+# Deliberate pairs that are not duplicates: two cards whose titles are the same once these patterns
+# (regular expressions) are removed, and differ before, are siblings, e.g.
+# ["(?i)\\b(android|ios|unity|web)\\b", "^Design - "] for platform twins and design / build pairs.
+sibling_patterns = []
+# Ready to start: "auto" counts only cards in the running sprint when the startable columns hold most of
+# the open cards (a board whose whole backlog waits in To Do); true always does, false never.
+ready_needs_sprint = "auto"
 closed_days = 60                             # closed items read for the flow numbers
+outside_comments = 5                         # newest comments read of a card outside the snapshot that a card points to
 # Work in progress limits per column, e.g. {{ "In Progress" = 3, "In Review" = 5 }}
 wip = {{}}
 # People. Off by default: hearthwood looks at the work, not at the people doing it.
-# true shows how much active work each person holds, as load, never as a score.
+# "names" shows who a card is assigned to and who wrote each comment, on the page only, as context
+# for the work: no number per person, and the Claude reading still names nobody.
+# true does that, lets the reading name people, and shows how much active work each person holds,
+# as load, never as a score.
 people = false
 person_wip = 0                               # with people = true: flag a person above this many
 
@@ -244,6 +255,27 @@ class BoardHome:
 
     def blocking_label(self, label):
         return any(fnmatch.fnmatchcase(label, pat) for pat in self.settings["rules"].get("blocking_labels", []))
+
+
+def demo_folder():
+    """The demo board's tickets, shipped inside the package."""
+    return str(resources.files("hearthwood").joinpath("demo-board"))
+
+
+def is_demo(b):
+    """True for a board connected with `manager connect demo`."""
+    return b.source == "markdown" and Path(b.where).name == "demo-board" and Path(b.where).parent.name == "hearthwood"
+
+
+PEOPLE = {False: "off", "names": "names", True: "all"}
+
+
+def people_mode(settings):
+    """off | names | all, from the board's `people`. names: shown on the page, never to the reading."""
+    v = settings["rules"].get("people", False)
+    if v not in PEOPLE:
+        raise ValueError(f'people in board.toml is false, "names" or true, not {v!r}')
+    return PEOPLE[v]
 
 
 def add_board(name, source, where, extra="", h=None):

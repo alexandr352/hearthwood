@@ -20,6 +20,15 @@ The snapshot holds every open item. It also holds the closed items updated in th
 `closed_days` days (60 by default), because the flow numbers need them and so does the question
 "is this dependency finished?".
 
+**Cards the board points to are read too.** A card can point to one the window left out: a blocker
+finished a year ago, a parent epic closed long ago, a card in another project. After the main read,
+every card an open card points to (blocked by, blocking, parent, sub-items) and that is missing is
+read by its key, with its newest `outside_comments` comments (5). It is kept apart, under `outside`
+in the snapshot: it says where that card stands (finished, its column and sprint) and is never
+counted as the board's work. A key that still cannot be read (gone, moved, or not visible to you)
+is named under "What could not be read" and counts as unknown. At most 500 such cards are read in
+one read.
+
 **Dependencies written in text count.** Many teams write dependencies in the description rather
 than in a field. A line that starts with "Depends on", "Blocked by", "Requires" or "Waits for"
 counts, and so do the lines after it up to a blank one. Every item key on those lines that is
@@ -65,8 +74,8 @@ it is never "ready" and never "not moving".
 
 | rule | severity | what it says |
 | --- | --- | --- |
-| `ready` | info | Items ready to start: open, in a startable column, every dependency finished, no blocking label, not a goal. Items under a goal that is already in progress come first, deepest goal first. After that comes the board's own order, or the item number when the order cannot be read. |
-| `blocked` | high to low | An item waiting or in progress that cannot move, with every reason: an unfinished dependency, a blocking label, or a dependency not in the snapshot (unknown, so counted as not done). It is **high** when a dependency was closed as not planned or duplicate, because then it will never finish. |
+| `ready` | info | Items ready to start: open, in a startable column, every dependency finished, no blocking label, not a goal. Items under a goal that is already in progress come first, deepest goal first. After that comes the board's own order, or the item number when the order cannot be read. On a board with a running sprint whose startable columns hold most of the open cards (the whole backlog waits in To Do), only the running sprint's cards count, and the finding says how many unblocked cards wait outside it: `ready_needs_sprint` (`"auto"`, `true` or `false`). |
+| `blocked` | high to low | An item waiting or in progress that cannot move, with every reason: an unfinished dependency (with where it stands: its column and sprint, and whether it is outside the snapshot), a blocking label, or a dependency that could not be read (unknown, so counted as not done). It is **high** when a dependency was closed as not planned or duplicate, because then it will never finish. |
 | `blocked-by-parked` | medium | An item blocked by a parked item: it waits on work nobody plans to do now. |
 | `waits-on-review` | low | Items whose only blockers are in review. The quickest unblock is a merge or an acceptance. |
 | `cycle` | high | Items that wait on each other, so none of them can start. |
@@ -80,8 +89,15 @@ it is never "ready" and never "not moving".
 | `parent-closed-children-open` | medium | A closed parent with open sub-items. |
 | `children-done-parent-open` | low | An open parent all of whose sub-items (at least two) are closed. |
 | `wip` | medium | A column over its work-in-progress limit (`wip` in `board.toml`). |
-| `duplicate` | low | Two open items that are each other's closest match by the words of their titles and descriptions, at least `duplicate_match` alike, and not already tied by the board (parent and sub-item, or a dependency); or two open items whose titles share at least `duplicate_similarity` of their words. They are named, never closed. How the search works, and why it is full-text search and not embeddings: [Finding duplicates](experiments/duplicate-search.md). |
+| `duplicate` | low | Two open items that are each other's closest match by the words of their titles and descriptions, at least `duplicate_match` alike, and not already tied by the board (parent and sub-item, a dependency, or siblings the board declares); or two open items whose titles share at least `duplicate_similarity` of their words. They are named, never closed. How the search works, and why it is full-text search and not embeddings: [Finding duplicates](experiments/duplicate-search.md). |
 | `done-before` | low | An open item and a completed one that are each other's closest match, at least `duplicate_match` alike: already done, or a follow-up that should say which work it follows. |
+
+**Siblings are not duplicates.** Some pairs are deliberate: one card per platform ("SDK - Android: X",
+"SDK - iOS: X"), or a design card and its build card ("Design - X" and "X"). `sibling_patterns` in
+`board.toml` lists regular expressions; two cards whose titles are the same once every match is
+removed, and differ before, are siblings. They are never named as duplicates or as done before, the
+card panel lists them, and `similar.md` marks them. Two cards with the very same title are still a
+duplicate.
 | `no-column` | low | Open items on no column. |
 | `no-parent` | low | Items in play that belong to no parent, on a board where most items have one. |
 | `thin` | low | Items in play with almost no description. |
@@ -156,7 +172,7 @@ It answers with one JSON object:
 - the shape and the lengths
 - that every key it cites is on the board
 - that every finding id it cites is in the facts
-- with `people = false`, that it names no assignee and no author of a comment
+- unless the board has `people = true`, that it names no assignee and no author of a comment
 
 A broken answer goes back **to the same session**, with each deviation named. The session already
 holds the mission and its own answer, so only what is wrong is sent. After `reconsider` tries
@@ -216,8 +232,8 @@ people. The static page says where to read it instead.
 
 A card's text is shown, never run: the panel builds every line with plain text and no HTML, and
 the embedded cards are escaped so that no card can close the element that holds them. Assignees and
-the authors of comments are not on the page unless the board has `people = true`, and anyone on
-the board named in a description or a comment reads "someone".
+the authors of comments are not on the page unless the board has `people = "names"` or `true`, and
+anyone on the board named in a description or a comment reads "someone".
 
 ### Four tabs, and the view
 
@@ -227,7 +243,18 @@ The page has four tabs; the one you last chose comes back, and `log.html#tab=sta
 (`recent_days` in board.toml) and, on a board with a running sprint, **This sprint | Everything**.
 Last 60 days and This sprint are the defaults; the choice is remembered. Each combination is
 computed when the page is built, so switching is instant and nothing is estimated in the browser.
-"Open, last 60 days" means open cards touched in the last 60 days.
+"Open, last 60 days" means open cards touched in the last 60 days. When two views hold the same
+cards (every card in the running sprint was touched in the last 60 days, say), the page says so
+under the totals, so a switch that changes nothing does not look broken.
+
+**More than one board:** a switch in the top row shows one board at a time, or every board; the
+demo board is marked as the demo, a real board is shown first, and the choice is remembered.
+Connecting your first real board offers to remove the demo (`manager disconnect demo` does it later).
+
+**The card panel** opens on the right, 400 px wide. Drag its left edge to widen it (the width is
+remembered), or press **full width**. A card outside the snapshot opens like any other and says so;
+its blockers and the cards it blocks are listed with where they stand (column, sprint, or closed);
+a card number that was never read opens in the tracker instead.
 
 - **Active**: the next step, the totals, the reading, the questions, the proposals, the findings,
   all for the cards in view. Findings about recently touched cards always come first, and the

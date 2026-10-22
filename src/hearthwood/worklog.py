@@ -54,9 +54,12 @@ details>summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:
 table{border-collapse:collapse;width:100%;font-size:13px}td,th{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
 button.key{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 button.key:hover,button.key:focus-visible{color:var(--ink)}
-#panel{position:fixed;top:0;right:0;bottom:0;width:min(400px,100vw);background:var(--panel);border-left:1px solid var(--line);
+#panel{position:fixed;top:0;right:0;bottom:0;width:min(var(--pw,400px),100vw);background:var(--panel);border-left:1px solid var(--line);
 box-shadow:-4px 0 24px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s ease;overflow-y:auto;z-index:10;padding:16px 18px 40px}
-#panel.open{transform:none}
+#panel.open{transform:none}#panel.full{width:100vw}#panel.dragging{transition:none;user-select:none}
+#panel .grip{position:fixed;top:0;bottom:0;right:calc(min(var(--pw,400px),100vw) - 4px);width:8px;cursor:col-resize;z-index:2}
+#panel .grip:hover,#panel.dragging .grip{background:color-mix(in srgb,var(--accent) 35%,transparent)}#panel.full .grip{display:none}
+#panel header .close+.close{margin-left:-4px}
 #panel header{display:flex;align-items:flex-start;gap:10px;position:sticky;top:-16px;margin:-16px -18px 8px;padding:16px 18px 10px;background:var(--panel);border-bottom:1px solid var(--line);z-index:1}
 #panel h2{margin:0;font-size:16px;line-height:1.35;flex:1}
 #panel .close{background:none;border:1px solid var(--line);border-radius:8px;color:var(--mute);cursor:pointer;font-size:13px;line-height:1;padding:5px 9px}
@@ -110,7 +113,8 @@ input.why{flex:1;min-width:0;padding:4px 10px;border:1px solid var(--line);borde
 input.why:focus{outline:none;border-color:var(--accent)}
 .acts .err{color:var(--red);font-size:12px;flex-basis:100%}
 .cmdhint{margin-top:8px;font:12px var(--font);color:var(--mute)}.cmdhint::before{content:'$ ';}
-@media (min-width:1100px){body.panel-open{padding-right:400px}body.panel-open #panel{box-shadow:none}}
+@media (min-width:1100px){body.panel-open{padding-right:var(--pw,400px)}body.panel-open #panel:not(.full){box-shadow:none}}
+.boardswitch .tag{font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-left:6px;color:var(--amber)}
 @media (prefers-reduced-motion:reduce){#panel,body{transition:none}}
 """
 
@@ -125,9 +129,19 @@ var boards=Object.keys(data);
 function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
 function txt(x){return document.createTextNode(x)}
 function card(b,k){return (data[b]||{})[k]}
-function key(b,k,extra){var c=card(b,k);if(!c)return txt(k+(extra||''));var x=el('button','key',k);x.type='button';x.dataset.key=k;
+function tracker(b,k){var l=(META[b]||{}).link||{},m;if(!/^https:\/\//.test(l.base||''))return '';
+  if(l.kind==='jira'&&/^[A-Z][A-Z0-9_]*-\d+$/.test(k))return l.base+'/browse/'+k;
+  if(l.kind==='github'&&(m=/^#(\d+)$/.exec(k)))return l.base+'/issues/'+m[1];
+  if(l.kind==='github'&&(m=/^([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)#(\d+)$/.exec(k)))return 'https://github.com/'+m[1]+'/issues/'+m[2];return ''}
+function key(b,k,extra){var c=card(b,k);if(!c){var u=tracker(b,k);if(!u)return txt(k+(extra||''));
+    var s0=el('span'),a=el('a',null,k);a.href=u;a.rel='noopener noreferrer';a.target='_blank';a.title='not read: open it in the tracker';
+    s0.appendChild(a);if(extra)s0.appendChild(txt(extra));return s0}
+  var x=el('button','key',k);x.type='button';x.dataset.key=k;
   x.title=c.title||'';var s=el('span');s.appendChild(x);if(extra)s.appendChild(txt(extra));return s}
 function keys(b,ks){var s=el('span');(ks||[]).forEach(function(k,i){if(i)s.appendChild(txt(', '));s.appendChild(key(b,k))});return s}
+function place(b,k){var c=card(b,k);if(!c)return ' (not read)';var bits=[c.state==='closed'?'closed'+(c.close_reason&&c.close_reason!=='completed'?' as '+String(c.close_reason).replace('_',' '):''):(c.column||'no column')];
+  if(c.sprint)bits.push(c.sprint);if(c.outside)bits.push('outside the snapshot');return ' ('+bits.join(', ')+')'}
+function depkeys(b,ks){var s=el('div');(ks||[]).forEach(function(k){var r=el('div');r.appendChild(key(b,k,place(b,k)));s.appendChild(r)});return s}
 function row(dl,label,node){if(!node)return;dl.appendChild(el('dt',null,label));var d=el('dd');d.appendChild(typeof node==='string'?txt(node):node);dl.appendChild(d)}
 function linked(b,text){var d=el('div','desc'),re=/#\d+|[A-Z][A-Z0-9_]*-\d+/g,at=0,m;
   while((m=re.exec(text))){var before=m.index?text.charAt(m.index-1):'',after=text.charAt(m.index+m[0].length);
@@ -144,7 +158,12 @@ function parse(){var h=location.hash.slice(1);if(h.indexOf('card=')!==0)return n
 function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board=b;P.dataset.key=k;
   var hd=el('header');var h=el('h2',null,k+' '+(c.title||''));h.id='panel-title';hd.appendChild(h);
   var x=el('button','close','close');x.type='button';x.setAttribute('aria-label','Close');x.onclick=close;hd.appendChild(x);P.appendChild(hd);
+  var grip=el('div','grip');grip.setAttribute('aria-hidden','true');grip.title='drag to widen';P.appendChild(grip);
+  var wide=el('button','close',P.classList.contains('full')?'narrow':'full width');wide.type='button';
+  wide.onclick=function(){P.classList.toggle('full');wide.textContent=P.classList.contains('full')?'narrow':'full width';
+    try{localStorage.setItem('hearthwood-panel-full',P.classList.contains('full')?'1':'')}catch(e){}};hd.insertBefore(wide,x);
   var chips=el('div','row');chips.appendChild(el('span','chip '+(c.state==='closed'?(c.close_reason==='completed'?'closed':''):'open'),state(c)));[c.column,c.kind].concat(c.labels||[]).forEach(function(v){if(v)chips.appendChild(el('span','chip',v))});P.appendChild(chips);
+  if(c.outside)P.appendChild(el('p','mute small','Outside the snapshot: read only because a card on the board points to it. It is shown where it stands and never counted as the board\'s work.'));
   if(c.stub){if(window.hwCard&&!c.unread){P.appendChild(el('p','mute small','Reading the card…'));
       window.hwCard(b,k).then(function(full){if(full){data[b][k]=full}else{c.unread=true}
         if(P.dataset.board===b&&P.dataset.key===k&&P.classList.contains('open'))show(b,k)})}
@@ -153,9 +172,10 @@ function show(b,k){var c=card(b,k);if(!c)return;P.textContent='';P.dataset.board
   else{var dl=el('dl');
     row(dl,'parent',c.parent?key(b,c.parent):null);
     row(dl,'sub-items',c.children&&c.children.length?keys(b,c.children):null);
-    row(dl,'blocked by',c.blocked_by&&c.blocked_by.length?keys(b,c.blocked_by):null);
-    row(dl,'written dependencies',c.depends_in_text&&c.depends_in_text.length?keys(b,c.depends_in_text):null);
-    row(dl,'blocking',c.blocking&&c.blocking.length?keys(b,c.blocking):null);
+    row(dl,'blocked by',c.blocked_by&&c.blocked_by.length?depkeys(b,c.blocked_by):null);
+    row(dl,'written dependencies',c.depends_in_text&&c.depends_in_text.length?depkeys(b,c.depends_in_text):null);
+    row(dl,'blocking',c.blocking&&c.blocking.length?depkeys(b,c.blocking):null);
+    row(dl,'siblings',c.siblings&&c.siblings.length?keys(b,c.siblings):null);
     if(c.prs&&c.prs.length){var ps=el('span');c.prs.forEach(function(p,i){if(i)ps.appendChild(txt(', '));
       var t=(p.number?'#'+p.number+' ':'')+p.state+(p.draft?' (draft)':'');
       if(/^https?:\/\//.test(p.url||'')){var a=el('a',null,t);a.href=p.url;a.rel='noopener noreferrer';a.target='_blank';ps.appendChild(a)}else ps.appendChild(txt(t))});row(dl,'pull requests',ps)}
@@ -227,7 +247,7 @@ function allList(sec){var box=sec.querySelector('.allist'),b=sec.dataset.board,c
       s.appendChild(el('span','mute small','cards · '+parts.join(' · ')+when))}
     d.appendChild(s);list.forEach(function(c){d.appendChild(row(c))});box.appendChild(d)}
   var by='column';
-  function draw(){box.textContent='';var keys=Object.keys(cards);
+  function draw(){box.textContent='';var keys=Object.keys(cards).filter(function(k){return !cards[k].outside});
     if(by==='sprint'){var groups={},none=[],closed=[];keys.forEach(function(k){var c=cards[k];
         if(c.sprint)(groups[c.sprint]=groups[c.sprint]||[]).push(c);else if(c.state==='closed')closed.push(c);else none.push(c)});
       var shown=spr.filter(function(s){return s.state!=='closed'});
@@ -253,7 +273,7 @@ function allList(sec){var box=sec.querySelector('.allist'),b=sec.dataset.board,c
   if(f)f.addEventListener('input',refilter);onView.push(refilter);refilter()}
 var VIEW={time:'recent',scope:'sprint'},META={};
 document.querySelectorAll('script.boardmeta').forEach(function(s){try{var m=JSON.parse(s.textContent);
-  META[s.dataset.board]={sprint:m.sprint&&m.sprint.length?new Set(m.sprint):null,recent:new Set(m.recent||[])}}catch(e){}});
+  META[s.dataset.board]={sprint:m.sprint&&m.sprint.length?new Set(m.sprint):null,recent:new Set(m.recent||[]),link:m.link||{}}}catch(e){}});
 try{VIEW.time=localStorage.getItem('hearthwood-time')==='all'?'all':'recent';VIEW.scope=localStorage.getItem('hearthwood-scope')==='all'?'all':'sprint'}catch(e){}
 function inView(b,k){var m=META[b];if(!m)return true;
   if(VIEW.scope==='sprint'&&m.sprint&&!m.sprint.has(k))return false;if(VIEW.time==='recent'&&!m.recent.has(k))return false;return true}
@@ -273,7 +293,7 @@ document.querySelectorAll('.viewswitch').forEach(function(sw){sw.addEventListene
     while((x=w.nextNode()))if(!x.parentNode.closest('.acts,.cmdhint'))t+=' '+x.nodeValue;
     n.querySelectorAll('button.key').forEach(function(k){t+=about(k.dataset.board||sec.dataset.board,k.dataset.key)});return t.toLowerCase()}
   function apply(){var q=f.value.trim().toLowerCase(),shown=0,all=0,narrowed=false;
-    document.querySelectorAll('[data-view=active] section[data-board]').forEach(function(sec){var head=null,first=true,seen=false,b=sec.dataset.board;
+    document.querySelectorAll('[data-view=active] section[data-board]').forEach(function(sec){if(sec.hidden)return;var head=null,first=true,seen=false,b=sec.dataset.board;
       var m=META[b]||{},set=VIEW.scope==='sprint'?m.sprint:null,recentOnly=VIEW.time==='recent',variant=variantOf(b);
       if(set||recentOnly)narrowed=true;
       function close(){if(head)head.hidden=(!!q||narrowed)&&!seen}
@@ -292,6 +312,13 @@ document.querySelectorAll('.viewswitch').forEach(function(sw){sw.addEventListene
     cnt.hidden=!(q||narrowed);cnt.textContent=shown+' of '+all+' shown'}
   f.addEventListener('input',apply);onView.push(apply)})();
 document.querySelectorAll('[data-view=all] section[data-board]').forEach(allList);
+(function(){var sw=document.querySelector('.boardswitch');if(!sw)return;var K='hearthwood-board',cur=null;
+  try{cur=localStorage.getItem(K)}catch(e){}
+  var names=[].map.call(sw.querySelectorAll('button[data-b]'),function(x){return x.dataset.b});if(names.indexOf(cur)<0)cur=sw.dataset.first;
+  function apply(){sw.querySelectorAll('button[data-b]').forEach(function(x){x.setAttribute('aria-pressed',String(x.dataset.b===cur))});
+    document.querySelectorAll('section[data-board]').forEach(function(sec){sec.hidden=cur!=='*'&&sec.dataset.board!==cur})}
+  sw.addEventListener('click',function(e){var x=e.target.closest('button[data-b]');if(!x)return;cur=x.dataset.b;
+    try{localStorage.setItem(K,cur)}catch(y){}apply();onView.forEach(function(fn){fn()})});apply()})();
 applyView();
 var TIP=document.getElementById('tip');
 function tipAt(t,x,y){TIP.textContent=t.dataset.tip;TIP.hidden=false;var w=TIP.offsetWidth;
@@ -306,6 +333,13 @@ document.addEventListener('click',function(e){var t=e.target.closest?e.target.cl
     if(!P.contains(t))last=t;var h='#'+hashOf(b,t.dataset.key);if(location.hash===h)sync();else location.hash=h;return}
   if(P.classList.contains('open')&&!P.contains(e.target)&&!WIDE.matches)close()});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
+function setWidth(w){w=Math.max(320,Math.min(w,innerWidth-160));document.documentElement.style.setProperty('--pw',w+'px');return w}
+try{var pw=+localStorage.getItem('hearthwood-panel-w');if(pw)setWidth(pw);if(localStorage.getItem('hearthwood-panel-full'))P.classList.add('full')}catch(e){}
+P.addEventListener('pointerdown',function(e){if(!e.target.classList.contains('grip'))return;e.preventDefault();P.classList.add('dragging');
+  var w=0;function mv(ev){w=setWidth(innerWidth-ev.clientX)}
+  function up(){removeEventListener('pointermove',mv);removeEventListener('pointerup',up);P.classList.remove('dragging');
+    if(w)try{localStorage.setItem('hearthwood-panel-w',String(w))}catch(x){}}
+  addEventListener('pointermove',mv);addEventListener('pointerup',up)});
 window.addEventListener('hashchange',sync);
 sync();
 })();
@@ -358,11 +392,11 @@ def _type(it, patterns):
     return it.get("kind") or ""
 
 
-def card_data(items, ref, similar, people, type_patterns=(), decided=None, stubs=True):
+def card_data(items, ref, similar, people, type_patterns=(), decided=None, stubs=True, siblings=None):
     """What the panel shows: the cards in `ref` whole, every other card on the board as a stub, so any card
     number the panel meets, in a field or in a description, opens something. With people off, a comment
     carries no author and anyone on the board named in a description or a comment reads "someone"."""
-    decided = decided or {}
+    decided, siblings = decided or {}, siblings or {}
     logins = {a for it in items.values() for a in list(it.get("assignees") or [])
               + [c.get("author") for c in it.get("thread") or []] if a}
     clean = (lambda t: t) if people else (lambda t: facts_mod.without_people(t, logins))
@@ -377,6 +411,8 @@ def card_data(items, ref, similar, people, type_patterns=(), decided=None, stubs
         c["prs"] = [{"number": p.get("number"), "state": p.get("state"), "draft": p.get("draft"),
                      "url": p.get("url") or ""} for p in it.get("prs") or []]
         c["similar"] = similar.get(k, [])
+        c["siblings"] = siblings.get(k, [])
+        c["outside"] = bool(it.get("outside"))
         c["type"] = _type(it, type_patterns)
         if people:
             c["assignees"] = it.get("assignees") or []
@@ -395,7 +431,7 @@ def card_data(items, ref, similar, people, type_patterns=(), decided=None, stubs
                     "labels": it.get("labels") or [], "parent": it.get("parent"), "updated": (it.get("updated") or "")[:10],
                     "sprint": (it.get("fields") or {}).get("sprint") or "",
                     "sprint_state": (it.get("fields") or {}).get("sprint_state") or "",
-                    "rank": (it.get("fields") or {}).get("rank"), "stub": True}
+                    "rank": (it.get("fields") or {}).get("rank"), "outside": bool(it.get("outside")), "stub": True}
     return cards
 
 
@@ -412,16 +448,47 @@ def full_card(h, board, key):
     stamp = (str(snap), snap.stat().st_mtime_ns)
     if _SNAP.get("stamp") != stamp:
         _SNAP.clear()
-        _SNAP.update(stamp=stamp, items={i["key"]: i for i in json.loads(snap.read_text(encoding="utf-8"))["items"]})
+        _SNAP.update(stamp=stamp, items=snapshot_cards(json.loads(snap.read_text(encoding="utf-8"))))
     items = _SNAP["items"]
     if key not in items:
         return None
     d = b.latest_analysis()
-    similar = {}
+    found = {}
     if d and (d / "facts.json").exists():
-        similar = json.loads((d / "facts.json").read_text(encoding="utf-8")).get("similar") or {}
-    return card_data(items, {key}, similar, bool(b.settings["rules"].get("people")),
-                     b.settings.get("stats", {}).get("type_labels", []), criteria.last_decided(h, b.name), stubs=False)[key]
+        found = json.loads((d / "facts.json").read_text(encoding="utf-8"))
+    return card_data(items, {key}, found.get("similar") or {}, home.people_mode(b.settings) != "off",
+                     b.settings.get("stats", {}).get("type_labels", []), criteria.last_decided(h, b.name), stubs=False,
+                     siblings=found.get("siblings"))[key]
+
+
+def snapshot_cards(data):
+    """{key: card} of a snapshot: the board's own cards, and the ones read from outside it, marked outside."""
+    out = {i["key"]: dict(i, outside=True) for i in data.get("outside") or []}
+    out.update({i["key"]: i for i in data["items"]})
+    return out
+
+
+def tracker_link(b):
+    """How a card number becomes a tracker address on the page, for a card the snapshot does not carry:
+    {"kind": "jira" | "github", "base": "https://..."}, or {} when the board has no tracker."""
+    if b.source == "jira" and str(b.settings.get("site", "")).startswith("https://"):
+        return {"kind": "jira", "base": b.settings["site"].rstrip("/")}
+    if b.source == "github" and re.match(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", b.where or ""):
+        return {"kind": "github", "base": "https://github.com/" + b.where}
+    return {}
+
+
+def who_to_ask(f, look):
+    """For a blocked finding, with names shown: each blocker and who it is assigned to."""
+    blockers = list((f.get("evidence") or {}).get("blockers") or {})
+    out = []
+    for k in blockers:
+        it = look.get(k)
+        if it is None:
+            continue
+        names = ", ".join(it.get("assignees") or []) or "nobody assigned"
+        out.append((k, names))
+    return out
 
 
 def _views(items, recent, inside):
@@ -515,7 +582,9 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
     parts = [f"<h2>{E(b.name)}<span class=where>{E(b.source)} · {E(b.where)}</span></h2>"]
     if not snap:
         return parts + ["<p class=mute>Not read yet: <code>manager read</code>.</p>"]
-    items = {i["key"]: i for i in json.loads(snap.read_text(encoding="utf-8"))["items"]}
+    snapdata = json.loads(snap.read_text(encoding="utf-8"))
+    items = {i["key"]: i for i in snapdata["items"]}
+    look = snapshot_cards(snapdata)       # card numbers open outside cards too; the counts stay on `items`
     ref = set()
     if not d or not (d / "facts.json").exists():
         return parts + [f"<p class=mute>Read {E(snap.stem)}; not analysed yet: <code>manager analyze</code>.</p>"]
@@ -528,10 +597,19 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
     days = int(b.settings["rules"].get("recent_days", 60))
     recent = _recent_keys(items, facts["fetched_at"], days)
     inside = set(sp.get("keys") or [])
-    for v, keep in _views(items, recent, inside):
+    variants = dict(_views(items, recent, inside))
+    for v, keep in variants.items():
         tiles = _tiles(items, facts, keep, by_rule)
         parts.append(f"<div class=tiles data-variant={v}>" + "".join(
             f"<div class=tile><b>{E(str(val))}</b><span class='mute small'>{E(k)}</span></div>" for k, val in tiles) + "</div>")
+    for scope in ("sprint", "all"):
+        a, z = variants.get(f"{scope}-recent"), variants.get(f"{scope}-all")
+        if a and a == z:
+            what = "in this sprint" if scope == "sprint" else "on this board"
+            for v in (f"{scope}-recent", f"{scope}-all"):
+                parts.append(f"<p class='mute small same' data-variant={v}>Last {days} days and All time hold the same "
+                             + (f"{len(a)} cards here: every card {what} was" if len(a) > 1 else f"card here: the one card {what} was")
+                             + f" updated in the last {days} days.</p>")
     if inside:
         names = " + ".join(s["name"] for s in sp["active"])
         ends = ", ".join(s["end"][:10] for s in sp["active"] if s.get("end"))
@@ -540,7 +618,8 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
     parts.append(f"<p class='mute small'>Analysis {E(d.name)} of the read {E(facts['fetched_at'])}. "
                  + " ".join(E(n) for n in facts.get("notes", [])) + "</p>")
     parts.append(f"<script type=application/json class=boardmeta data-board=\"{E(b.name)}\">"
-                 + embed({"sprint": sorted(inside), "recent": sorted(recent), "days": days}) + "</script>")
+                 + embed({"sprint": sorted(inside), "recent": sorted(recent), "days": days, "link": tracker_link(b)})
+                 + "</script>")
     r = reading.load(d)
     verdicts = {}
     for v in criteria.all_verdicts(h, b.name):
@@ -553,14 +632,14 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
             seen = {"view": "all-all"}
         covers = ("" if seen.get("view", "all-all") == "all-all" else
                   f"<span class='mute small'>Claude read {E(seen.get('label', ''))}: {seen.get('cards')} of {seen.get('of')} cards</span>")
-        parts.append(f"<h2>What needs attention {covers}</h2><div class='card summary'>{_prose(r.get('summary', ''), items, ref)}</div>")
+        parts.append(f"<h2>What needs attention {covers}</h2><div class='card summary'>{_prose(r.get('summary', ''), look, ref)}</div>")
         for n, a in enumerate(r.get("attention") or [], 1):
             v = verdicts.get(f"A{n}")
-            parts.append(f"<div class=card><div class=row><span class=id>A{n}</span><h3>{_prose(a['title'], items, ref)}</h3>"
+            parts.append(f"<div class=card><div class=row><span class=id>A{n}</span><h3>{_prose(a['title'], look, ref)}</h3>"
                          + (f"<span class=badge>{E(a['confidence'])} confidence</span>" if a.get('confidence') else "")
                          + (f"<span class='badge {E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
-                         + f"</div><div class=keys>{_keys(a.get('keys', []), items, ref)}</div><p>{_prose(a['why'], items, ref)}</p>"
-                         f"<p class=small><b>Next step:</b> {_prose(a['next_step'], items, ref)}</p>"
+                         + f"</div><div class=keys>{_keys(a.get('keys', []), look, ref)}</div><p>{_prose(a['why'], look, ref)}</p>"
+                         f"<p class=small><b>Next step:</b> {_prose(a['next_step'], look, ref)}</p>"
                          + (f"<p class='mute small'>Your reason: {E(v['why'])}</p>" if v and v.get("why") else "")
                          + _acts("point", f"A{n}", b, d, bool(v), ui, many) + "</div>")
         qs = r.get("questions") or []
@@ -569,7 +648,7 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
             for n, q in enumerate(qs, 1):
                 v = verdicts.get(f"Q{n}")
                 parts.append(f"<div class=card><div class=row><span class=id>Q{n}</span><span class=badge>for {E(q.get('for', ''))}</span>"
-                             f"{_prose(q['question'], items, ref)}</div>"
+                             f"{_prose(q['question'], look, ref)}</div>"
                              + (f"<p class=small><b>Answered:</b> {E(v.get('answer', ''))}</p>" if v else "")
                              + _acts("question", f"Q{n}", b, d, bool(v), ui, many) + "</div>")
         try:
@@ -580,8 +659,8 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
             parts.append("<h2>Proposals <span class='mute small'>nothing is written to the board; approving records your decision</span></h2>")
             for p in props:
                 parts.append(f"<div class=card><div class=row><span class=id>{E(p['id'])}</span><span class=badge>{E(p['action'])}</span>"
-                             f"<span class='badge {E(p.get('status', 'proposed'))}'>{E(p.get('status', 'proposed'))}</span>{_keys(p.get('keys', []), items, ref)}</div>"
-                             f"<p>{_prose(p['change'], items, ref)}</p><p class='mute small'>{_prose(p['why'], items, ref)}</p>"
+                             f"<span class='badge {E(p.get('status', 'proposed'))}'>{E(p.get('status', 'proposed'))}</span>{_keys(p.get('keys', []), look, ref)}</div>"
+                             f"<p>{_prose(p['change'], look, ref)}</p><p class='mute small'>{_prose(p['why'], look, ref)}</p>"
                              + (f"<p class='mute small'>Your reason: {E(p['why_status'])}</p>" if p.get("why_status") else "")
                              + _acts("proposal", p["id"], b, d, p.get("status", "proposed") != "proposed", ui, many) + "</div>")
     elif (d / "reading-broken.json").exists() or (d / "reading-failed.txt").exists():
@@ -600,8 +679,9 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
             f"<span class='mute small' data-variant={v}>{len(ks)}{(' ' + what) if what else ''}</span>" for v, ks, what in variants) + "</h2>")
         for v, ks, what in variants:
             parts.append(f"<div class='card readylist' data-variant={v}>"
-                         + (_keys(ks, items, ref, 100 if v != "all-all" else 20) if ks else "<span class=mute>nothing ready here</span>")
+                         + (_keys(ks, look, ref, 100 if v != "all-all" else 20) if ks else "<span class=mute>nothing ready here</span>")
                          + "</div>")
+    people = home.people_mode(b.settings) != "off"
     shown = [f for f in facts["findings"] if f["rule"] != "ready"]
     fresh = [f for f in shown if recent.intersection(f["keys"])]
     old = [f for f in shown if not recent.intersection(f["keys"])]
@@ -610,15 +690,17 @@ def board_section(h, b, extra_ref=(), ui=False, many=False):
     for f in fresh + old:
         v = verdicts.get(f["id"])
         parts.append(f"<details class='card finding{'' if f in fresh else ' older'}'><summary><span class=row><span class='badge {E(f['severity'])}'>{E(f['severity'])}</span>"
-                     f"<span>{_prose(f['title'], items, ref)}</span><span class=id>{E(f['id'])}</span>"
+                     f"<span>{_prose(f['title'], look, ref)}</span><span class=id>{E(f['id'])}</span>"
                      + (f"<span class='badge {E(v['verdict'])}'>{E(v['verdict'])}</span>" if v else "")
-                     + f"</span></summary><p>{_prose(f['says'], items, ref)}</p><div class=keys>{_keys(f['keys'], items, ref)}</div>"
+                     + f"</span></summary><p>{_prose(f['says'], look, ref)}</p><div class=keys>{_keys(f['keys'], look, ref)}</div>"
+                     + (("<p class=small><b>Who to ask:</b> " + "; ".join(f"{_keys([k], look, ref)} {E(n)}" for k, n in asks)
+                         + "</p>") if people and (asks := who_to_ask(f, look)) else "")
                      + (f"<p class='mute small'>Your reason: {E(v['why'])}</p>" if v and v.get("why") else "")
                      + _acts("finding", f["id"], b, d, bool(v), ui, many) + "</details>")
-    people = bool(b.settings["rules"].get("people"))
-    ref |= {k for k in extra_ref if k in items}
-    cards = card_data(items, ref, facts.get("similar") or {}, people,
-                      b.settings.get("stats", {}).get("type_labels", []), criteria.last_decided(h, b.name))
+    ref |= {k for k in extra_ref if k in look}
+    cards = card_data(look, ref, facts.get("similar") or {}, people,
+                      b.settings.get("stats", {}).get("type_labels", []), criteria.last_decided(h, b.name),
+                      siblings=facts.get("siblings"))
     parts.append(f"<script type=application/json class=cards data-board=\"{E(b.name)}\">{embed(cards)}</script>")
     return parts
 
@@ -924,6 +1006,11 @@ def render(h=None, ui=False):
     bs = home.boards(h)
     days = int(bs[0].settings["rules"].get("recent_days", 60)) if bs else 60
     sprinting = any(_has_sprint(b) for b in bs)
+    first = next((b.name for b in bs if not home.is_demo(b)), bs[0].name if bs else "")
+    switch = ("<span class='scope boardswitch' role=group aria-label='Which board' data-first=\"" + E(first) + "\">"
+              + "".join(f"<button type=button data-b=\"{E(b.name)}\" aria-pressed={'true' if b.name == first else 'false'}>"
+                        f"{E(b.name)}" + ("<span class=tag>demo</span>" if home.is_demo(b) else "") + "</button>" for b in bs)
+              + "<button type=button data-b=* aria-pressed=false>every board</button></span>") if len(bs) > 1 else ""
     views = (f"<span class='scope viewswitch' data-switch=time role=group aria-label='How far back'>"
              f"<button type=button data-on=recent aria-pressed=true>Last {days} days</button>"
              "<button type=button data-on=all aria-pressed=false>All time</button></span>"
@@ -931,7 +1018,7 @@ def render(h=None, ui=False):
                 "<button type=button data-on=sprint aria-pressed=true>This sprint</button>"
                 "<button type=button data-on=all aria-pressed=false>Everything</button></span>" if sprinting else ""))
     body = [f"<div class=top><h1>hearth<span>wood</span><small>version {E(__version__)} · built {E(home.now_iso())}</small></h1>"
-            f"<span class=tools>{views}<a class=theme href=#criteria>criteria</a>"
+            f"<span class=tools>{switch}{views}<a class=theme href=#criteria>criteria</a>"
             "<button class=theme onclick=\"var r=document.documentElement,d=r.dataset.theme==='dark'||(!r.dataset.theme&&"
             "matchMedia('(prefers-color-scheme: dark)').matches);r.dataset.theme=d?'light':'dark'\">theme</button></span></div>",
             "<nav class=tabs role=tablist aria-label=Views><button type=button role=tab data-tab=active aria-selected=true>Active</button>"

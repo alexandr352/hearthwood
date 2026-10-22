@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.12.0 — 2026-10-22
+
+From the first product owner to use hearthwood on a real Jira board (issues #1 to #8).
+
+- **Blockers outside the snapshot are read.** A card blocked by one closed long ago, or in another
+  project, was counted as blocked by something unknown: on her board 54 of 93 `blocked` findings
+  were that. Now every card an open card points to (blocked by, blocking, parent, sub-items) that the
+  snapshot left out is read by its key, with its newest `outside_comments` comments (5). A blocker
+  that is finished no longer blocks; one that is not says where it stands, column and sprint. Those
+  cards open in the panel like any other, marked as outside the snapshot, and are never counted as
+  the board's work. A key that still cannot be read is named and links to the tracker. (#2, #3, #4)
+- **`people = "names"`**: assignees and the authors of comments on the page and in the card panel,
+  and "Who to ask" under a blocked finding, as context for the work. No `load` rule, no number per
+  person, and the Claude reading still names nobody. (#3, #4)
+- **Siblings are not duplicates.** `sibling_patterns` in board.toml: two cards whose titles are the
+  same once a pattern is removed, and differ before, are siblings ("SDK - Android: X" and "SDK - iOS:
+  X"; "Design - X" and "X"). They are never named as duplicates or done before; the panel lists
+  them. (#8)
+- **Ready means ready.** On a board whose whole backlog waits in To Do, "1,179 ready to start" meant
+  the backlog. With a running sprint and most open cards in the startable columns, only sprint cards
+  count as ready now, and the finding says how many unblocked cards wait outside it.
+  `ready_needs_sprint = "auto" | true | false`. (#7)
+- **Two views with the same cards say so**, so the switch does not look broken. (#5)
+- **The demo steps aside.** Connecting your first real board offers to remove the demo; with more
+  than one board, a switch in the top row shows one at a time, the demo marked as such. (#6)
+- **The card panel can be widened**: drag its left edge (remembered), or **full width**. (#1)
+
 ## 0.11.2 — 2026-10-12
 
 - **Said plainly who it is for.** Hearthwood is a board tool: product owners, delivery leads and

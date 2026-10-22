@@ -66,7 +66,12 @@ For every open issue, and every issue closed within `closed_days`, hearthwood re
 - the newest 20 comments, with when and by whom, and how many there are in all
 
 Assignees and the authors of comments are read too, but they are only shown when the board has
-`people = true`.
+`people = "names"` or `true`.
+
+Every issue an open issue points to (blocked by, blocking, parent, sub-issue) that the window left
+out, closed long ago or in another repository, is read by its number, with its newest 5 comments,
+so that a blocker finished long ago reads as finished. Those issues are shown where they stand and
+never counted as the board's work.
 
 ## A folder of markdown files
 
@@ -166,7 +171,13 @@ some workflows never use that category and only resolve, so either one counts.
   its status sits in
 
 Assignees and the authors of comments are read too, but they are only shown when the board has
-`people = true`.
+`people = "names"` or `true`.
+
+Every issue an open issue points to (is blocked by, blocks, parent, sub-task) that the window left
+out, resolved long ago or in another project, is read by its key, with its newest 5 comments, so
+that a blocker finished long ago reads as finished. An issue of another project is shown in its
+status, since the board has no column for it. A key Jira will not show (gone, moved, or not visible
+to your sign-in) is named, and counts as unknown.
 
 **Not read: pull requests.** Jira keeps them in its development panel, which has no public API.
 The snapshot says so, and the rules about pull requests stand down for a Jira board rather than

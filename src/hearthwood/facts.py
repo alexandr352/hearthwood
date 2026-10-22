@@ -16,7 +16,7 @@ import statistics
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 
-from . import search, sprints
+from . import home, search, sprints
 
 SEVERITIES = ("high", "medium", "low", "info")
 STOP = {"a", "an", "the", "to", "of", "in", "on", "for", "and", "or", "with", "is", "be", "by", "at", "as",
@@ -69,9 +69,12 @@ class Analysis:
         self.cols = settings["columns"]
         self.now = now or parse_ts(board.fetched_at) or datetime.now(timezone.utc)
         self.items = board.by_key()
+        self.known = board.lookup()           # the board's cards and the ones read from outside it
         self.findings = []
         self.search = {}
         self.similar = {}
+        self.siblings = self.find_siblings()
+        self.ready_all, self.ready_note = [], ""
 
     # --- reading an item ----------------------------------------------------
 
@@ -99,7 +102,7 @@ class Analysis:
 
     def dep_state(self, key):
         """done | in-review | open | parked | abandoned | unknown, for a dependency's key."""
-        d = self.items.get(key)
+        d = self.known.get(key)
         if d is None:
             return "unknown"
         if d.state == "closed":
@@ -113,16 +116,38 @@ class Analysis:
             return "parked"
         return "open"
 
+    def place(self, key):
+        """Where a card stands, for a sentence: "In Progress, Sprint 148", "outside the snapshot" when it is."""
+        d = self.known.get(key)
+        if d is None:
+            return ""
+        bits = [d.column or ("closed" if d.state == "closed" else "no column")]
+        if d.fields.get("sprint"):
+            bits.append(d.fields["sprint"])
+        if key not in self.items:
+            bits.append("outside the snapshot")
+        return " (" + ", ".join(bits) + ")"
+
     def why_blocked(self, d, st):
+        where = self.place(d)
         if st == "in-review":
-            return f"{d} is in review, not yet merged or accepted"
+            return f"{d}{where} is in review, not yet merged or accepted"
         if st == "open":
-            return f"{d} is not finished"
+            return f"{d}{where} is not finished"
         if st == "parked":
-            return f"{d} is parked ({self.items[d].column}), so this waits on work nobody plans to do now"
+            return f"{d}{where} is parked, so this waits on work nobody plans to do now"
         if st == "abandoned":
-            return f"{d} was closed as {self.items[d].close_reason.replace('_', ' ')}, so it will never finish"
-        return f"{d} is not in the snapshot (closed long ago, or elsewhere): unknown, so counted as not done"
+            gone = " (outside the snapshot)" if d not in self.items else ""
+            return f"{d}{gone} was closed as {self.known[d].close_reason.replace('_', ' ')}, so it will never finish"
+        return f"{d} is not in the snapshot and was not read from outside it (gone, moved, or not visible): unknown, so counted as not done"
+
+    def where_of(self, key):
+        """{"column", "sprint", "state", "outside"} of a card the snapshot knows, for a finding's evidence."""
+        d = self.known.get(key)
+        if d is None:
+            return {"unknown": True}
+        return {"column": d.column, "sprint": d.fields.get("sprint") or "", "state": d.state,
+                "outside": key not in self.items}
 
     def rank(self, it):
         r = it.fields.get("rank")
@@ -151,7 +176,7 @@ class Analysis:
         self.r_duplicates()
         self.r_unplaced()
         self.r_thin()
-        if self.rules.get("people"):
+        if home.people_mode(self.s) == "all":
             self.r_load()
         self.flow = self.r_flow()
         order = {s: n for n, s in enumerate(SEVERITIES)}
@@ -193,7 +218,8 @@ class Analysis:
             rule = "blocked-by-parked" if "parked" in states else "blocked"
             self.add(rule, worst, f"{it.key} in {it.column} is blocked", [it.key] + [d for d, _ in reasons],
                      f"{it.key} \"{it.title}\" ({it.column}): " + "; ".join(parts) + ".",
-                     {"column": it.column, "blockers": dict(reasons), "labels": labels})
+                     {"column": it.column, "blockers": dict(reasons), "labels": labels,
+                      "where": {d: self.where_of(d) for d, _ in reasons}})
         if waiting_on_merge:
             keys = [k for k, _ in waiting_on_merge]
             lines = [f"{k} waits on {', '.join(ds)}" for k, ds in waiting_on_merge]
@@ -213,14 +239,49 @@ class Analysis:
                 k, depth = p.parent, depth + 1
             return 0
         ready.sort(key=lambda it: (-depth_under_active(it), self.rank(it)))
-        self.ready = [it.key for it in ready]
+        self.ready_all = self.ready = [it.key for it in ready]
         ranked = any(isinstance(it.fields.get("rank"), int) for it in ready)
-        if ready:
-            self.add("ready", "info", f"{count_of(len(ready))} " + ("is" if len(ready) == 1 else "are") + " ready to start", self.ready,
-                     ("Ready means: in a column where work waits, every dependency finished, no blocking label. "
+        narrow = self.ready_in_sprint()
+        if narrow:
+            self.ready = [k for k in self.ready_all if k in narrow]
+        if self.ready or narrow:
+            where = " in the running sprint" if narrow else ""
+            self.add("ready", "info", f"{count_of(len(self.ready))} " + ("is" if len(self.ready) == 1 else "are")
+                     + f" ready to start{where}", self.ready,
+                     ("Ready means: in a column where work waits, every dependency finished, no blocking label"
+                      + (", and in the running sprint" if narrow else "") + ". "
                       "Order: items under a parent that is in progress first, then "
-                      + ("the board's own order." if ranked else "by number, because the board's order was not readable.")),
-                     {"order": self.ready, "board_order": ranked})
+                      + ("the board's own order." if ranked else "by number, because the board's order was not readable.")
+                      + (" " + self.ready_note if self.ready_note else "")),
+                     {"order": self.ready, "board_order": ranked, "in_sprint_only": bool(narrow),
+                      "unblocked_outside_sprint": len(self.ready_all) - len(self.ready)})
+
+    def ready_in_sprint(self):
+        """The running sprint's keys when only its cards count as ready, else an empty set. `ready_needs_sprint`:
+        true, false, or "auto" (the default): only when the startable columns hold most of the open cards, the
+        board where the whole backlog waits in To Do and "ready" would otherwise mean the backlog."""
+        mode = self.rules.get("ready_needs_sprint", "auto")
+        if mode not in ("auto", True, False):
+            raise ValueError(f'ready_needs_sprint in board.toml is "auto", true or false, not {mode!r}')
+        inside = sprints.active_keys(self.board.items)
+        if mode is False or not inside:
+            if mode is True:
+                self.ready_note = "(ready_needs_sprint is on, but no sprint is running, so every unblocked card counts.)"
+            return set()
+        opened = self.open_items()
+        waiting = sum(1 for i in opened if self.role(i) == "startable")
+        if mode == "auto" and not (len(opened) >= 20 and waiting > len(opened) / 2):
+            return set()
+        rest = len([k for k in self.ready_all if k not in inside])
+        here = sorted({i.column for i in opened if self.role(i) == "startable"})
+        cols = ", ".join(here) or "the startable columns"
+        self.ready_note = (f"{count_of(rest, 'more card')} in {cols} {'is' if rest == 1 else 'are'} unblocked but outside "
+                           f"the running sprint. " + (f"{cols} {'holds' if len(here) == 1 else 'hold'} {waiting} of the "
+                           f"board's {len(opened)} open cards, so "
+                           "they are the backlog, not work about to start: only sprint cards count as ready here "
+                           '(ready_needs_sprint = "auto" in board.toml; true or false decides it for good).'
+                           if mode == "auto" else "Only sprint cards count as ready (ready_needs_sprint = true)."))
+        return inside
 
     def r_cycles(self):
         graph = {it.key: [d for d in self.deps(it) if d in self.items] for it in self.board.items if it.state == "open"}
@@ -335,10 +396,42 @@ class Analysis:
                          + ", ".join(i.key for i in here) + ".", {"column": col, "count": len(here), "limit": limit})
 
     def linked(self, a, b):
-        """Two items the board already ties together: parent and sub-item, or a dependency either way."""
+        """Two items the board already ties together: parent and sub-item, a dependency either way, or
+        siblings the board declares (sibling_patterns)."""
         A, B = self.items[a], self.items[b]
         return (A.parent == b or B.parent == a or b in A.children or a in B.children
-                or b in self.deps(A) or a in self.deps(B) or b in A.blocking or a in B.blocking)
+                or b in self.deps(A) or a in self.deps(B) or b in A.blocking or a in B.blocking
+                or b in self.siblings.get(a, ()))
+
+    def find_siblings(self):
+        """{key: [keys]}: cards whose titles are the same once every `sibling_patterns` match is removed, and
+        differ before it ("SDK - Android: X" and "SDK - iOS: X"; "Design - X" and "X"). Two cards with the same
+        title are not siblings: they are still a duplicate."""
+        comp = []
+        for pat in self.rules.get("sibling_patterns") or []:
+            try:
+                comp.append(re.compile(pat))
+            except re.error as e:
+                raise ValueError(f"sibling_patterns in board.toml: {pat!r} is not a regular expression ({e})")
+        if not comp:
+            return {}
+
+        def norm(t):
+            return " ".join(re.findall(r"[a-z0-9]+", t.lower()))
+        groups = {}
+        for it in self.board.items:
+            t = it.title
+            for c in comp:
+                t = c.sub(" ", t)
+            if norm(t):
+                groups.setdefault(norm(t), []).append(it)
+        out = {}
+        for g in groups.values():
+            for a in g if len(g) > 1 else ():
+                sib = [b.key for b in g if b is not a and norm(b.title) != norm(a.title)]
+                if sib:
+                    out[a.key] = sorted(sib, key=_num)
+        return out
 
     def r_duplicates(self):
         """Items that read alike: open twins, and open work that reads like work already finished."""
@@ -506,7 +599,8 @@ class Analysis:
 
     def to_dict(self):
         return {"board": self.board.name, "fetched_at": self.board.fetched_at, "notes": self.board.notes,
-                "flow": self.flow, "ready": self.ready, "search": self.search, "sprint": self.sprint(),
+                "flow": self.flow, "ready": self.ready, "ready_note": self.ready_note, "search": self.search,
+                "sprint": self.sprint(), "siblings": self.siblings,
                 "similar": {k: v for k, v in self.similar.items() if self.items[k].state == "open"},
                 "findings": [asdict(f) for f in self.findings]}
 
@@ -531,7 +625,8 @@ class Analysis:
             if keep is not None and it.key not in keep:
                 continue
             hits = self.similar.get(it.key) or []
-            cells = [f"{o} {m:.2f}" + (" (linked)" if self.linked(it.key, o) else "")
+            cells = [f"{o} {m:.2f}" + (" (sibling)" if o in self.siblings.get(it.key, ()) else
+                                       " (linked)" if self.linked(it.key, o) else "")
                      + (f" ({self.items[o].state})" if self.items[o].state != "open" else "") for o, m in hits]
             out.append(f"{it.key} | " + (" | ".join(cells) if cells else "-"))
         return "\n".join(out) + "\n"
@@ -544,6 +639,11 @@ class Analysis:
         out = [f"# Facts of board {self.board.name}", "",
                f"Read {self.board.fetched_at} from {self.board.source} {self.board.where}.", "",
                self.search_line(), ""]
+        if self.siblings:
+            groups = {tuple(sorted([k] + v, key=_num)) for k, v in self.siblings.items()}
+            out += [f"The board declares deliberate pairs (sibling_patterns): {len(self.siblings)} cards in {len(groups)} "
+                    "groups of siblings, such as one card per platform. Siblings are never duplicates; similar.md marks "
+                    "them (sibling).", ""]
         if keep is not None:
             out += [f"**This reading covers {view_label}: {len(keep)} of {len(self.items)} cards, and the "
                     f"{len(shown)} of {len(self.findings)} findings that touch them.** The rest of the board is outside "
@@ -611,8 +711,20 @@ def board_index(board, analysis, decided=None, keep=None):
              [f"# The cards in view and the cards they link to: {len(listed)} of {len(items)}", ""]) + [
              "key | state | column | type | parent | depends on | pull requests | labels | comments | updated | title",
              ""]
-    for it in sorted(board.items, key=lambda i: _num(i.key)):
-        if listed is not None and it.key not in listed:
+    pointed = set()
+    for it in board.items:
+        if listed is None or it.key in listed:
+            pointed.update([it.parent] + list(it.children) + analysis.deps(it) + list(it.blocking))
+    outside = [it for it in board.outside if it.key in pointed]
+    rows = sorted(board.items, key=lambda i: _num(i.key))
+    if outside:
+        rows += [None] + sorted(outside, key=lambda i: _num(i.key))
+    for it in rows:
+        if it is None:
+            lines += ["", f"# Outside the snapshot: {len(outside)} cards the cards above point to, read only to say "
+                      "where they stand (not the board's own work)", ""]
+            continue
+        if listed is not None and it.key not in listed and it.key not in pointed:
             continue
         deps = analysis.deps(it)
         prs = ",".join(f"{p.number or ''}:{p.state}" for p in it.prs)
@@ -633,7 +745,7 @@ def new_comments(it, since):
 
 def board_logins(board):
     """Every login the board shows: assignees and the authors of comments."""
-    return {a for it in board.items for a in list(it.assignees) + [c.author for c in it.thread] if a}
+    return {a for it in board.items + board.outside for a in list(it.assignees) + [c.author for c in it.thread] if a}
 
 
 def without_people(text, logins):

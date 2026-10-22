@@ -13,19 +13,23 @@ Authorization header the caller supplies: the user's own sign-in in hearthwood i
   board    the board's columns, in order, and which statuses sit in each: an issue's column is
            the column its status belongs to. Without the board (no board, or no permission) the
            column is the status name, and the snapshot says so.
+  outside  the issues an open issue points to (blocked by, blocking, parent, sub-tasks) that the
+           window above left out, closed long ago or in another project: read by key, so a blocker
+           finished long ago reads as finished, not as unknown.
 
 Jira keeps pull requests in its development panel, which has no public API: pull requests are
 not read, the snapshot says so, and the rules about pull requests stand down for this board.
 """
 
 import json
+import re
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from ..model import Board, Comment, Item
+from ..model import Board, Comment, Item, outside_keys, outside_notes
 
 API = "https://api.atlassian.com/ex/jira/{cloud_id}"
 PAGE = 50                   # issues per search page; each carries its history and comments
@@ -217,7 +221,7 @@ def _who(user):
     return (user or {}).get("displayName") or ""
 
 
-def issue_to_item(n, site_url, column_of, sprint_field=None, rank=None):
+def issue_to_item(n, site_url, column_of, sprint_field=None, rank=None, comments_kept=COMMENTS):
     f = n.get("fields") or {}
     status = f.get("status") or {}
     # Finished: resolved, or in a status of the Done category. Some workflows never put a status in that
@@ -239,7 +243,7 @@ def issue_to_item(n, site_url, column_of, sprint_field=None, rank=None):
     c = f.get("comment") or {}
     comments = c.get("comments") or []
     thread = [Comment(at=utc(x.get("created")), author=_who(x.get("author")), body=adf_to_text(x.get("body")))
-              for x in comments][-COMMENTS:]
+              for x in comments][-comments_kept:] if comments_kept else []
     history = []
     for h in ((n.get("changelog") or {}).get("histories") or []):
         for it in h.get("items") or []:
@@ -320,8 +324,39 @@ def search(jira, jql, fields, progress=None):
             return out
 
 
+KEY = re.compile(r"^[A-Z][A-Z0-9_]*-\d+$")
+
+
+def read_outside(jira, keys, site_url, column_of, sprint_field=None, comments_kept=5):
+    """([Item], [keys not read]) for issues named by key. One search per page of keys; when Jira refuses a
+    page (a key that no longer exists, or one this sign-in may not see, fails the whole search), that page
+    is read one issue at a time and the keys that still cannot be read are named."""
+    keys = [k for k in dict.fromkeys(keys) if KEY.match(k or "")]
+    fields = FIELDS + ([sprint_field] if sprint_field else [])
+
+    def column(status_id, status_name):
+        # an issue of another project has a status the board does not show: its status is its column
+        col = column_of(status_id, status_name)
+        return col if col[0] else ((status_name or None), "status" if status_name else "none")
+    found = []
+    for i in range(0, len(keys), PAGE):
+        chunk = keys[i:i + PAGE]
+        try:
+            issues = search(jira, "key in (" + ",".join(chunk) + ")", fields)
+        except JiraError:
+            issues = []
+            for k in chunk:
+                try:
+                    issues.append(jira.get(f"/rest/api/3/issue/{k}", {"fields": ",".join(fields), "expand": "changelog"}))
+                except JiraError:
+                    continue
+        found += [issue_to_item(n, site_url, column, sprint_field, comments_kept=comments_kept) for n in issues]
+    got = {it.key for it in found}
+    return [it for it in found if it.key in set(keys)], [k for k in keys if k not in got]
+
+
 def read_board(name, cloud_id, site_url, project, auth, board_id=0, transport=None, renew=None, closed_days=60,
-               now=None, progress=None, sleep=time.sleep):
+               now=None, progress=None, sleep=time.sleep, outside_comments=5):
     now = now or datetime.now(timezone.utc)
     jira = Jira(cloud_id, auth, transport=transport, renew=renew, sleep=sleep)
     notes = []
@@ -372,12 +407,17 @@ def read_board(name, cloud_id, site_url, project, auth, board_id=0, transport=No
                 if c and c not in columns:
                     columns.append(c)
     cut = sum(1 for it in items if it.comments > len(it.thread))
+    wanted, left = outside_keys(items)
+    outside, unread = read_outside(jira, wanted, site_url, column_of, sprint, outside_comments) if wanted else ([], [])
     board = Board(name=name, source="jira", where=f"{site_url.rstrip('/')} {project}",
-                  fetched_at=now.strftime("%Y-%m-%dT%H:%M:%SZ"), columns=columns, items=items, prs_read=False)
+                  fetched_at=now.strftime("%Y-%m-%dT%H:%M:%SZ"), columns=columns, items=items, prs_read=False,
+                  outside=outside)
     board.notes = notes + [
         "pull requests are not read: Jira keeps them in its development panel, which has no public API. The rules "
         "about pull requests stand down for this board."]
+    board.notes += outside_notes(len(outside), unread, left)
     if cut:
         board.notes.append(f"{cut} items have more comments than the newest {COMMENTS} that were read.")
     board.notes.append(f"Jira requests made: {jira.requests}.")
     return board
+

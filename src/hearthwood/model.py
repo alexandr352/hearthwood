@@ -63,6 +63,16 @@ class Board:
     items: list = field(default_factory=list)        # Item
     notes: list = field(default_factory=list)        # what could not be read, and why
     prs_read: bool = True   # False when the tracker's pull requests cannot be read (Jira): their rules stand down
+    # Cards outside the snapshot's window (closed long ago, or in another project) that a card on the board
+    # points to: a blocker, a parent, a sub-item. Read only to say where they stand; never counted as the
+    # board's own work.
+    outside: list = field(default_factory=list)      # Item
+
+    def lookup(self):
+        """Every card the snapshot knows, the board's own and the ones read from outside it."""
+        out = {i.key: i for i in self.outside}
+        out.update(self.by_key())
+        return out
 
     def by_key(self):
         return {i.key: i for i in self.items}
@@ -72,12 +82,47 @@ class Board:
 
     @classmethod
     def from_dict(cls, d):
-        items = []
-        for raw in d.get("items", []):
+        def item(raw):
             raw = dict(raw)
             raw["prs"] = [PullRequest(**p) for p in raw.get("prs", [])]
             raw["thread"] = [Comment(**c) for c in raw.get("thread", [])]
-            items.append(Item(**raw))
+            return Item(**raw)
         return cls(name=d["name"], source=d["source"], where=d.get("where", ""), fetched_at=d["fetched_at"],
-                   columns=list(d.get("columns", [])), items=items, notes=list(d.get("notes", [])),
-                   prs_read=d.get("prs_read", True))
+                   columns=list(d.get("columns", [])), items=[item(r) for r in d.get("items", [])],
+                   notes=list(d.get("notes", [])), prs_read=d.get("prs_read", True),
+                   outside=[item(r) for r in d.get("outside", [])])
+
+
+OUTSIDE_LIMIT = 500         # at most this many cards are read from outside the snapshot in one read
+
+
+def outside_keys(items, limit=OUTSIDE_LIMIT):
+    """([keys], how many were left out): the cards an OPEN card points to (blocked by, blocking, parent,
+    sub-items) that are not among `items`. Blockers first, as they decide whether work can start."""
+    have = {i.key for i in items}
+    first, rest = [], []
+    for it in items:
+        if it.state != "open":
+            continue
+        for k in it.blocked_by:
+            if k and k not in have:
+                first.append(k)
+        for k in list(it.blocking) + [it.parent] + list(it.children):
+            if k and k not in have:
+                rest.append(k)
+    keys = list(dict.fromkeys(first + rest))
+    return keys[:limit], max(0, len(keys) - limit)
+
+
+def outside_notes(read, unread, left):
+    """What a snapshot says about the cards read from outside its window."""
+    out = []
+    if read:
+        out.append(f"{read} cards outside this snapshot were read because an open card points to them (a blocker, a "
+                   "parent or a sub-item); they are shown where they stand and never counted as the board's work.")
+    if unread:
+        out.append(f"{len(unread)} cards an open card points to could not be read (gone, moved, or not visible to this "
+                   "sign-in): " + ", ".join(unread[:20]) + ("..." if len(unread) > 20 else "") + ". They count as unknown.")
+    if left:
+        out.append(f"{left} more cards outside the snapshot were not read: one read takes at most {OUTSIDE_LIMIT}.")
+    return out

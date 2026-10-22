@@ -8,15 +8,19 @@ Read-only. Every request is a GraphQL query; nothing here can write. Two levels 
   board    the token also reads the Projects board: the column comes from the board itself,
            and so does the board's order. A fine-grained token needs the owner's permission
            "Projects: read" for this (an organization permission when an organization owns it).
+  outside  the issues an open issue points to (blocked by, blocking, parent, sub-issues) that the
+           window left out, closed long ago or in another repository: read by number, so a
+           blocker finished long ago reads as finished, not as unknown.
 """
 
 import json
+import re
 import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from ..model import Board, Comment, Item, PullRequest
+from ..model import Board, Comment, Item, PullRequest, outside_keys, outside_notes
 
 API = "https://api.github.com/graphql"
 PAGE = 25
@@ -80,6 +84,43 @@ def read_more(gh, owner, repo, number, field, after, home_repo):
         page = conn.get("pageInfo") or {}
         after = page.get("endCursor") if page.get("hasNextPage") else None
     return out
+
+
+# Issues read by number, OUTSIDE_PAGE to a query, each under its own alias; an issue that is gone or
+# hidden answers null with an error of its own, and the others still come back.
+OUTSIDE_PAGE = 20
+OUTSIDE_KEY = re.compile(r"^(?:([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+))?#(\d+)$")
+
+
+def read_outside(gh, keys, home_repo, comments_kept=5):
+    """([Item], [keys not read]) for issues named by key: "#12" in this repository, "owner/repo#12" in another."""
+    home_owner, _, home_name = home_repo.partition("/")
+    wanted = []
+    for k in dict.fromkeys(keys):
+        m = OUTSIDE_KEY.match(k or "")
+        if m:
+            wanted.append((k, m.group(1) or home_owner, m.group(2) or home_name, int(m.group(3))))
+    fields = ISSUE_FIELDS % max(1, comments_kept)
+    found = []
+    for i in range(0, len(wanted), OUTSIDE_PAGE):
+        chunk = wanted[i:i + OUTSIDE_PAGE]
+        parts = [f'i{n}: repository(owner: {json.dumps(o)}, name: {json.dumps(r)}) {{ issue(number: {num}) {{ {fields} }} }}'
+                 for n, (_, o, r, num) in enumerate(chunk)]
+        try:
+            data, _ = gh.query("query { %s rateLimit { cost remaining resetAt } }" % " ".join(parts), {})
+        except GitHubError:
+            continue                          # these keys stay unread, and the snapshot names them
+        for n, (k, o, r, num) in enumerate(chunk):
+            node = ((data.get(f"i{n}") or {}).get("issue"))
+            if not node:
+                continue
+            it = issue_to_item(node, home_repo)
+            it.key = k                        # "owner/repo#12" stays itself; issue_to_item names every issue "#12"
+            if not comments_kept:
+                it.thread = []
+            found.append(it)
+    got = {it.key for it in found}
+    return found, [k for k, *_ in wanted if k not in got] + [k for k in dict.fromkeys(keys) if not OUTSIDE_KEY.match(k or "")]
 
 
 PROJECT_QUERY = """
@@ -292,15 +333,17 @@ def read_project(gh, owner, number, home_repo, status_field="Status"):
 
 
 def read_board(name, where, project=0, project_owner="", token=None, transport=None, closed_days=60,
-               now=None, progress=None):
+               now=None, progress=None, outside_comments=5):
     owner, _, repo = where.partition("/")
     if not owner or not repo:
         raise GitHubError(f"`where` must be owner/repo, not {where!r}")
     gh = GitHub(token, transport=transport)
     now = now or datetime.now(timezone.utc)
     items, home_repo = read_issues(gh, owner, repo, closed_days, now=now, progress=progress)
+    wanted, left = outside_keys(items)
+    outside, unread = read_outside(gh, wanted, home_repo, outside_comments) if wanted else ([], [])
     board = Board(name=name, source="github", where=home_repo, fetched_at=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                  items=items)
+                  items=items, outside=outside)
     if project:
         rows, columns, why = read_project(gh, project_owner or owner, int(project), home_repo)
         if rows is None:
@@ -315,6 +358,11 @@ def read_board(name, where, project=0, project_owner="", token=None, transport=N
                     it.fields = dict(fields, rank=rank)
                 else:
                     it.column, it.column_source = None, "none"
+            for it in outside:                # off the board, an outside card keeps its last status change
+                if it.key in rows:
+                    it.column, rank, fields = rows[it.key]
+                    it.column_source = "board"
+                    it.fields = dict(fields)
             missing = sum(1 for it in items if it.column_source == "none" and it.state == "open")
             if missing:
                 board.notes.append(f"{missing} open issues are not on the Projects board #{project}.")
@@ -328,5 +376,6 @@ def read_board(name, where, project=0, project_owner="", token=None, transport=N
         board.columns = seen
         board.notes.append("columns are taken from the issues' status history, so their order is a guess "
                            "and an issue whose status never changed has no column.")
+    board.notes += outside_notes(len(outside), unread, left)
     board.notes.append(f"GitHub rate limit spent: {gh.cost} points.")
     return board

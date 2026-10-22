@@ -133,7 +133,7 @@ def prepare(b, board, analysis, verdicts, view="all-all"):
         n += 1
         d = b.analyses / f"{home.stamp()}-{n}"
     (d / "items").mkdir(parents=True)
-    people = bool(b.settings["rules"].get("people"))
+    people = home.people_mode(b.settings) == "all"     # "names" is the page's, never the reading's
     days = int(b.settings["rules"].get("recent_days", 60))
     keep = None if view == "all-all" else sprints.view_keys(board.items, view, board.fetched_at, days)
     label = sprints.VIEW_LABELS[view].format(days=days)
@@ -145,7 +145,7 @@ def prepare(b, board, analysis, verdicts, view="all-all"):
     (d / "facts.md").write_text(analysis.to_markdown(verdicts, decided, keep, label), encoding="utf-8")
     (d / "board.md").write_text(facts.board_index(board, analysis, decided, keep), encoding="utf-8")
     (d / "similar.md").write_text(analysis.similar_markdown(keep), encoding="utf-8")
-    for it in board.items:
+    for it in board.items + board.outside:
         (d / "items" / facts.item_file_name(it.key)).write_text(
             facts.item_markdown(it, people, decided.get(it.key), logins), encoding="utf-8")
     crit = b.home / "criteria.md"
@@ -185,10 +185,10 @@ def run(b, d, board, analysis, claude_bin=None, model=None):
     tries = int(cfg["reading"].get("reconsider", 3))
     max_turns = int(cfg["reading"].get("max_turns", 30))
     timeout = int(cfg["timeouts"].get("reading", 900))
-    keys = set(board.by_key())
+    keys = set(board.lookup())
     fids = {f.id for f in analysis.findings}
     logins = facts.board_logins(board)
-    people = bool(b.settings["rules"].get("people"))
+    people = home.people_mode(b.settings) == "all"
     settings = fence.settings_for()
     settings["claudeMdExcludes"] = claude.doctrine_excludes(d)
     policy = {"mode": "analyst", "root": str(d), "log": str(d / "fence.log")}

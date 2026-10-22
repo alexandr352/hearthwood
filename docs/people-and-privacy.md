@@ -13,7 +13,13 @@ something said about a person.
   - anyone on the board who is named in a description or a comment, as an @mention or as their
     bare login, reads "someone", in the item files and on the page
   - the reading's contract refuses an answer that names an assignee or the author of a comment
-- **Load, never a score.** With `people = true`, one rule (`load`) appears. It flags a person
+- **Names as context, on the page only.** With `people = "names"`, the page and the card panel show
+  who each card is assigned to and who wrote each comment, and a blocked card says who holds its
+  blocker ("Who to ask"). That is about the work: who to ask to unblock or finish it. Nothing is
+  counted per person, and everything the reading is given stays as it is with `people = false`: no
+  names, and its contract still refuses an answer that names someone.
+- **Load, never a score.** With `people = true`, names show as with `"names"`, the reading may name
+  people too, and one rule (`load`) appears. It flags a person
   holding more than `person_wip` items in progress or review at once, because too much at once
   slows every item. Nothing in hearthwood measures, ranks or compares how much anyone finishes,
   how fast, or how well, and nothing will.

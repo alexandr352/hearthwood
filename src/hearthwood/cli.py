@@ -114,6 +114,7 @@ def cmd_connect_github(args):
     else:
         out(f"  the token will be taken from {'the ' + credentials.ENV_VAR + ' variable' if args.token_from == 'env' else 'the GitHub CLI'}")
     out(f"  settings: {b.dir / 'board.toml'}  (how your columns are used: check them once)")
+    offer_demo_removal(b)
     out("\nnext: manager read")
     return 0
 
@@ -230,14 +231,31 @@ def cmd_connect_jira(args):
             "every `manager read` tries the board again.")
     out(f"  signed in; the sign-in is kept in {jira_auth.grant_path(b)}, readable by you alone")
     out(f"  settings: {b.dir / 'board.toml'}  (how your columns are used: check them once)")
+    offer_demo_removal(b)
     out("\nnext: manager read")
     return 0
 
 
-def demo_folder():
-    """The demo board's tickets, shipped inside the package."""
-    from importlib import resources
-    return str(resources.files("hearthwood").joinpath("demo-board"))
+demo_folder = home.demo_folder
+
+
+def offer_demo_removal(b):
+    """After the first real board is connected: the demo's made-up cards would sit beside the real ones on the
+    page. Asked in a terminal; said, with the command, anywhere else."""
+    if home.is_demo(b):
+        return
+    others = home.boards(b.home)
+    demos = [x for x in others if home.is_demo(x)]
+    if not demos or any(not home.is_demo(x) for x in others if x.name != b.name):
+        return
+    d = demos[0]
+    out(f"\nThe demo board ({d.name}) is still connected; its made-up cards show on the page next to yours.")
+    if sys.stdin.isatty():
+        if input("Remove the demo now? [Y/n] ").strip().lower() in ("", "y", "yes"):
+            shutil.rmtree(d.dir)
+            out(f"  demo board {d.name} removed (`manager connect demo` brings it back)")
+            return
+    out(f"  to remove it: manager disconnect {d.name}")
 
 
 def cmd_connect_demo(args):
@@ -292,6 +310,7 @@ def cmd_connect_markdown(args):
         return fail(f"no such folder: {folder}")
     b = home.add_board(args.board, "markdown", folder)
     out(f"board {b.name}: the markdown files in {folder}")
+    offer_demo_removal(b)
     out("\nnext: manager read")
     return 0
 

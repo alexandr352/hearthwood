@@ -57,7 +57,7 @@ class FakeAtlassian:
 
     def __init__(self, pages, boards=((7, "APP board", "kanban"),), config=CONFIG, board_status=200, rank=True):
         self.pages, self.boards, self.config, self.board_status, self.rank = pages, boards, config, board_status, rank
-        self.calls, self.fail_401 = [], 0
+        self.calls, self.fail_401, self.outside = [], 0, {}
 
     def __call__(self, method, url, headers, body=None):
         u = urllib.parse.urlparse(url)
@@ -76,6 +76,17 @@ class FakeAtlassian:
         if path == "/rest/api/3/field":
             return 200, {}, json.dumps([{"id": "customfield_10020", "schema": {"custom": "com.pyxis.greenhopper.jira:gh-sprint"}},
                                         {"id": "summary", "schema": {}}]).encode()
+        if path == "/rest/api/3/search/jql" and json.loads(body)["jql"].startswith("key in ("):
+            keys = json.loads(body)["jql"][len("key in ("):-1].split(",")
+            gone = [k for k in keys if k not in self.outside]
+            if gone:                          # as Jira does: one missing key fails the whole search
+                return 400, {}, json.dumps({"errorMessages": [f"An issue with key '{gone[0]}' does not exist."]}).encode()
+            return 200, {}, json.dumps({"issues": [self.outside[k] for k in keys]}).encode()
+        if path.startswith("/rest/api/3/issue/"):
+            k = path.rsplit("/", 1)[1]
+            if k in self.outside:
+                return 200, {}, json.dumps(self.outside[k]).encode()
+            return 404, {}, b'{"errorMessages":["Issue does not exist or you do not have permission to see it."]}'
         if path == "/rest/api/3/search/jql":
             q = json.loads(body)
             if "ORDER BY Rank" in q["jql"] and not self.rank:

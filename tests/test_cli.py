@@ -123,3 +123,36 @@ class Markdown(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DemoAfterARealBoard(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.folder = self.tmp.name                # a real board: any folder of tickets but the demo's own
+
+    def test_outside_a_terminal_it_says_how(self):
+        with TempHome() as t:
+            manager("connect", "demo")
+            rc, text = manager("connect", "markdown", self.folder, "--board", "real")
+            self.assertEqual(rc, 0)
+            self.assertIn("The demo board (demo) is still connected", text)
+            self.assertIn("to remove it: manager disconnect demo", text)
+            self.assertTrue((t.h / "boards" / "demo").exists())
+
+    def test_in_a_terminal_it_asks_and_removes(self):
+        with TempHome() as t:
+            manager("connect", "demo")
+            with mock.patch("sys.stdin.isatty", return_value=True), mock.patch("builtins.input", return_value=""):
+                rc, text = manager("connect", "markdown", self.folder, "--board", "real")
+            self.assertIn("demo board demo removed", text)
+            self.assertFalse((t.h / "boards" / "demo").exists())
+            self.assertTrue((t.h / "boards" / "real").exists())
+
+    def test_asked_once_only(self):
+        with TempHome() as t:
+            manager("connect", "demo")
+            manager("connect", "markdown", self.folder, "--board", "real")
+            rc, text = manager("connect", "markdown", self.folder, "--board", "second")
+            self.assertNotIn("still connected", text)

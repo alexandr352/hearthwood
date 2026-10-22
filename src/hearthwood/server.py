@@ -493,7 +493,7 @@ CHAT_UI = r"""
 <button type=button id=chat-open class=pill hidden>Spirit</button>
 <style>
 #chat{position:fixed;top:0;right:0;width:400px;height:100vh;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;z-index:5}
-@media (min-width:1100px){body.ui:not(.chat-hidden){padding-right:400px}body.ui.chat-hidden #chat{display:none}}
+@media (min-width:1100px){body.ui:not(.chat-hidden){padding-right:400px}body.ui.chat-hidden #chat{display:none}body.ui.panel-open{padding-right:max(400px,var(--pw,400px))}}
 @media (max-width:1099px){#chat{width:100%;display:none;z-index:8}body.chat-shown #chat{display:flex}}
 #chat header{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
 #chat header b{flex:1}#chat-cost{color:var(--mute);font-size:12px}

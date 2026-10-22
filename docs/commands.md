@@ -82,8 +82,11 @@ an analysis other than the latest. The page's buttons (`manager ui`) record thro
 | `[rules] duplicate_match` | 0 to 1: how closely two items must read alike to be named (full-text); 1 is as close as an item is to itself |
 | `[rules] duplicate_candidates` | how many closest matches per item go into `similar.md` for the reading |
 | `[rules] duplicate_similarity` | 0 to 1: how alike two open titles must be to be named (titles) |
+| `[rules] sibling_patterns` | regular expressions for deliberate pairs that are not duplicates, e.g. `["(?i)\\b(android\|ios\|unity)\\b", "^Design - "]` ([How it works](how-it-works.md)) |
+| `[rules] ready_needs_sprint` | `"auto"` (only sprint cards count as ready when To Do holds most open cards), `true` or `false` |
 | `[rules] closed_days` | how far back closed items are read |
+| `[rules] outside_comments` | the newest comments read of a card outside the snapshot that an open card points to (5) |
 | `[rules] wip` | limits per column, e.g. `{ "In Progress" = 3 }` |
-| `[rules] people`, `person_wip` | off by default; see [People and privacy](people-and-privacy.md) |
+| `[rules] people`, `person_wip` | `false` (the default), `"names"` or `true`; see [People and privacy](people-and-privacy.md) |
 | `[stats] type_labels` | label patterns that give a card its type on the Stats tab, e.g. `["type:*"]`; empty = the tracker's issue type |
 | `[stats] goal_labels` | label patterns that make a card a goal even with nothing under it, e.g. `["epic"]` |

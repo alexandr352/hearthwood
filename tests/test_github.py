@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 
 import helpers  # noqa: F401
@@ -25,7 +26,7 @@ def issue(n, state="OPEN", updated="2026-10-09T00:00:00Z", statuses=(), **kw):
 class FakeGitHub:
     def __init__(self, open_pages, closed_pages, project=None, status=200):
         self.open, self.closed, self.project, self.status, self.queries = open_pages, closed_pages, project, status, []
-        self.more = {}
+        self.more, self.outside = {}, {}
 
     def __call__(self, url, headers, body):
         assert headers["Authorization"] == "Bearer T"
@@ -34,6 +35,12 @@ class FakeGitHub:
         if self.status != 200:
             return self.status, b'{"message": "Bad credentials"}'
         v = q["variables"]
+        asked = re.findall(r'(i\d+): repository\(owner: "([^"]+)", name: "([^"]+)"\) \{ issue\(number: (\d+)\)', q["query"])
+        if asked:                             # the outside read: issues by number, one alias each
+            data = {a: {"issue": self.outside.get((o, r, int(n)))} for a, o, r, n in asked}
+            errors = [{"message": f"Could not resolve to an Issue with the number of {n}."}
+                      for a, o, r, n in asked if not data[a]["issue"]]
+            return 200, json.dumps({"data": data, "errors": errors}).encode()
         if "issue(number:" in q["query"]:
             field = next(f for f in ("subIssues", "blockedBy", "blocking") if f + "(first: 100" in q["query"])
             rest = self.more[(v["number"], field)]

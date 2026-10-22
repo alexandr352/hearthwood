@@ -29,9 +29,9 @@ def item(key, state="open", column="Todo", **kw):
                 created=kw.pop("created", "2026-09-01T00:00:00Z"), updated=kw.pop("updated", "2026-10-09T00:00:00Z"), **kw)
 
 
-def board(*items, notes=()):
+def board(*items, notes=(), outside=()):
     return Board(name="t", source="github", where="o/r", fetched_at="2026-10-10T00:00:00Z", items=list(items),
-                 notes=list(notes))
+                 notes=list(notes), outside=list(outside))
 
 
 class TempHome:

@@ -58,12 +58,13 @@ def take(b, transport=None, progress=None):
             raise ValueError(f"no GitHub token: looked in {where_from}")
         board = github.read_board(b.name, b.where, project=int(s.get("project") or 0),
                                   project_owner=s.get("project_owner") or "", token=token, transport=transport,
-                                  closed_days=int(s["rules"].get("closed_days", 60)), progress=progress)
+                                  closed_days=int(s["rules"].get("closed_days", 60)), progress=progress,
+                                  outside_comments=int(s["rules"].get("outside_comments", 5)))
     elif b.source == "jira":
         auth = jira_auth.BoardAuth(b, transport=transport)
         board = jira.read_board(b.name, s["cloud_id"], s["site"], s["project"], auth.header, board_id=int(s.get("board_id") or 0),
                                 transport=transport, renew=auth.renew, closed_days=int(s["rules"].get("closed_days", 60)),
-                                progress=progress)
+                                progress=progress, outside_comments=int(s["rules"].get("outside_comments", 5)))
     elif b.source == "markdown":
         board = markdown.read_board(b.name, b.where, done_columns=tuple(s["columns"].get("done", [])))
     else:

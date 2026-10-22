@@ -135,7 +135,7 @@ class Page(unittest.TestCase):
 
     def test_links_to_the_tracker_open_in_a_new_tab(self):
         page = self.build()
-        self.assertEqual(page.count("a.target='_blank'"), 2)
+        self.assertEqual(page.count("a.target='_blank'"), 3)        # the card, its pull requests, a card not read
 
     def test_the_page_says_what_to_do_next(self):
         page = self.build()
