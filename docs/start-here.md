@@ -208,6 +208,38 @@ manager update
 It fetches the newest hearthwood from GitHub. Your boards, verdicts and criteria stay; they live in
 the home, not in the program.
 
+**Then read your board once more:** **Read the board** on the Claude tab, or `manager read`. A new
+version often reads more from the board than the old one did, and the page shows it only after a
+fresh read. [What changed](../CHANGELOG.md) lists every version, newest first.
+
+## Changing how hearthwood reads your board
+
+Each board has a settings file, `board.toml`, in hearthwood's folder on your laptop. `manager boards`
+lists your boards by name; for a board called `team`, open its settings in TextEdit with:
+
+```sh
+open -e ~/.hearthwood/boards/team/board.toml
+```
+
+The settings about findings are under the line `[rules]`. A line starting with `#` is a note, not a
+setting. To change one, edit its line, or add the line under `[rules]` if it is not there yet. Never
+write the same setting twice: hearthwood then stops with *"Cannot overwrite a value (at line …)"*,
+and the line number points to the second one. Save, then **Read the board** again.
+
+Two you may want:
+
+```toml
+# Show who a card is assigned to and who wrote each comment, on the page only.
+people = "names"
+
+# Cards that are deliberate pairs, not duplicates: one per platform, a design card and its build card.
+sibling_patterns = ['(?i)\b(android|ios|unity|web|figma)\b', '^Design - ']
+```
+
+Write patterns between **single** quotes, as above: inside single quotes a backslash stays a
+backslash. (Between double quotes, `\b` would quietly mean something else and the pattern would
+never match.) Every setting is explained in [Commands and settings](commands.md#settings).
+
 ## If something goes wrong
 
 | what you see | what to do |
